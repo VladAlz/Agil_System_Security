@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, Text, Vibration, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { usePanicHold } from '../hooks/usePanicHold';
@@ -7,8 +7,6 @@ const SIZE = 200;
 const RADIUS = 88;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
 interface Props {
   onConfirm: () => void;
 }
@@ -16,6 +14,14 @@ interface Props {
 export default function PanicButton({ onConfirm }: Props) {
   const progress = useRef(new Animated.Value(0)).current;
   const animation = useRef<Animated.CompositeAnimation | null>(null);
+  const [dashOffset, setDashOffset] = useState(CIRCUMFERENCE);
+
+  useEffect(() => {
+    const id = progress.addListener(({ value }) => {
+      setDashOffset(CIRCUMFERENCE * (1 - value));
+    });
+    return () => progress.removeListener(id);
+  }, [progress]);
 
   const handleConfirm = () => {
     Vibration.vibrate([0, 120, 80, 120]);
@@ -54,11 +60,6 @@ export default function PanicButton({ onConfirm }: Props) {
     }),
   ).current;
 
-  const strokeDashoffset = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [CIRCUMFERENCE, 0],
-  });
-
   return (
     <View style={styles.wrapper} testID="panic-button" {...panResponder.panHandlers}>
       <Svg
@@ -75,18 +76,17 @@ export default function PanicButton({ onConfirm }: Props) {
           strokeWidth={10}
           fill="transparent"
         />
-        <AnimatedCircle
+        <Circle
           cx={SIZE / 2}
           cy={SIZE / 2}
           r={RADIUS}
           stroke="#ef4444"
           strokeWidth={10}
           fill="transparent"
-          strokeDasharray={String(CIRCUMFERENCE)}
-          strokeDashoffset={strokeDashoffset as unknown as number}
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={dashOffset}
           strokeLinecap="round"
-          rotation="-90"
-          origin={`${SIZE / 2}, ${SIZE / 2}`}
+          transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
         />
       </Svg>
 
