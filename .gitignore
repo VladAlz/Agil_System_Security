@@ -31,8 +31,6 @@ Thumbs.db
 # Test coverage
 coverage/
 
-# Proyectos externos con su propio repo
-vigil-connect-app/
 
 # Logs
 npm-debug.log*
