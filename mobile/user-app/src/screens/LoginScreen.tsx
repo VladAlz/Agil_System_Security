@@ -12,7 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, loginDev } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +76,10 @@ export default function LoginScreen() {
             ? <ActivityIndicator color="#fff" />
             : <Text style={styles.buttonText}>Ingresar</Text>}
         </Pressable>
+
+        <Pressable onPress={loginDev} testID="btn-dev-login">
+          <Text style={styles.devLink}>[ Modo prueba — sin backend ]</Text>
+        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
@@ -134,5 +138,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
+  },
+  devLink: {
+    color: '#475569',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });

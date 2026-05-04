@@ -7,6 +7,7 @@ interface AuthContextValue {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginDev: () => void;
   logout: () => Promise<void>;
 }
 
@@ -40,6 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(data.accessToken);
   };
 
+  const loginDev = () => {
+    setUser({ id: 'dev-001', name: 'Vladimir (Dev)', email: 'dev@ssiu.test', role: 'Student', faculty: 'FISEI' });
+    setToken('dev-token');
+  };
+
   const logout = async () => {
     await authService.logout();
     setUser(null);
@@ -47,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, loginDev, logout }}>
       {children}
     </AuthContext.Provider>
   );
