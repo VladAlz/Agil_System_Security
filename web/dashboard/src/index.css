@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 40% 97%;
+    --foreground: 0 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 30% 12%;
+
+    /* UTA red */
+    --primary: 354 78% 42%;
+    --primary-foreground: 30 40% 98%;
+    --primary-glow: 14 90% 58%;
+
+    /* Sunset amber */
+    --secondary: 28 96% 56%;
+    --secondary-foreground: 0 30% 12%;
+
+    --muted: 30 30% 94%;
+    --muted-foreground: 0 10% 40%;
+
+    --accent: 320 70% 55%;
+    --accent-foreground: 30 40% 98%;
+
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 30 40% 98%;
+
+    --success: 142 60% 38%;
+    --success-foreground: 30 40% 98%;
+
+    --border: 20 30% 88%;
+    --input: 20 30% 88%;
+    --ring: 354 78% 42%;
+
+    --radius: 0.85rem;
+
+    /* Sunset gradients & shadows */
+    --gradient-sunset: linear-gradient(135deg, hsl(354 78% 42%) 0%, hsl(14 90% 55%) 45%, hsl(35 95% 60%) 100%);
+    --gradient-dusk: linear-gradient(180deg, hsl(354 60% 28%) 0%, hsl(14 70% 35%) 50%, hsl(28 85% 55%) 100%);
+    --gradient-glow: radial-gradient(circle at 30% 20%, hsl(35 95% 65% / 0.35), transparent 60%);
+    --gradient-card: linear-gradient(160deg, hsl(0 0% 100%) 0%, hsl(30 40% 97%) 100%);
+
+    --shadow-glow: 0 10px 40px -10px hsl(354 78% 42% / 0.45);
+    --shadow-elegant: 0 8px 30px -12px hsl(0 30% 12% / 0.18);
+    --shadow-alert: 0 0 0 4px hsl(0 84% 50% / 0.15), 0 8px 24px -8px hsl(0 84% 50% / 0.45);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 35% 14%;
+    --sidebar-foreground: 30 40% 95%;
+    --sidebar-primary: 14 90% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 30% 20%;
+    --sidebar-accent-foreground: 30 40% 95%;
+    --sidebar-border: 0 25% 22%;
+    --sidebar-ring: 28 96% 56%;
+  }
+
+  .dark {
+    --background: 0 25% 8%;
+    --foreground: 30 40% 96%;
+    --card: 0 30% 12%;
+    --card-foreground: 30 40% 96%;
+    --popover: 0 30% 12%;
+    --popover-foreground: 30 40% 96%;
+    --primary: 14 90% 58%;
+    --primary-foreground: 0 30% 10%;
+    --secondary: 0 30% 18%;
+    --secondary-foreground: 30 40% 96%;
+    --muted: 0 25% 16%;
+    --muted-foreground: 30 20% 70%;
+    --accent: 320 70% 55%;
+    --accent-foreground: 30 40% 96%;
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 30 40% 96%;
+    --border: 0 25% 20%;
+    --input: 0 25% 20%;
+    --ring: 14 90% 58%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer utilities {
+  .bg-sunset { background: var(--gradient-sunset); }
+  .bg-dusk { background: var(--gradient-dusk); }
+  .bg-glow { background: var(--gradient-glow); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-elegant { box-shadow: var(--shadow-elegant); }
+  .shadow-alert { box-shadow: var(--shadow-alert); }
+  .text-gradient-sunset {
+    background: var(--gradient-sunset);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@keyframes pulse-alert {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(0 84% 50% / 0.6); }
+  50% { box-shadow: 0 0 0 14px hsl(0 84% 50% / 0); }
+}
+@keyframes ping-ring {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-pulse-alert { animation: pulse-alert 2s infinite; }
+.animate-ping-ring { animation: ping-ring 1.8s cubic-bezier(0,0,0.2,1) infinite; }
+.animate-slide-in { animation: slide-in 0.35s ease-out both; }
+.animate-float { animation: float 4s ease-in-out infinite; }
