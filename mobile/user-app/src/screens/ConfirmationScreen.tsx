@@ -1,12 +1,14 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { signalRService } from '../services/signalRService';
 import type { RootStackParamList } from '../../App';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Confirmation'>;
 
 export default function ConfirmationScreen({ navigation, route }: Props) {
-  const { timestamp } = route.params;
+  const { timestamp, userId } = route.params;
+  const [assignedGuard, setAssignedGuard] = useState<string | null>(null);
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -15,9 +17,27 @@ export default function ConfirmationScreen({ navigation, route }: Props) {
       Animated.spring(scale, { toValue: 1, tension: 80, friction: 6, useNativeDriver: true }),
       Animated.timing(opacity, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start();
+
+    // Iniciar conexión SignalR
+    signalRService.startConnection();
+
+    // Escuchar cuando un guardia asume la alerta
+    signalRService.onAlertAssumed((alertId, guardName) => {
+      // En una app real filtraríamos por alertId
+      setAssignedGuard(guardName);
+    });
+
+    signalRService.onAlertClosed(() => {
+      navigation.navigate('Panic');
+    });
+
+    return () => {
+      // No detenemos la conexión aquí por si el usuario vuelve
+    };
   }, []);
 
   const formatted = new Date(timestamp).toLocaleTimeString('es-EC', {
+
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -29,8 +49,18 @@ export default function ConfirmationScreen({ navigation, route }: Props) {
         <Text style={styles.checkIcon}>✓</Text>
       </Animated.View>
 
-      <Text style={styles.title}>Alerta enviada</Text>
-      <Text style={styles.subtitle}>Los guardias de tu zona han sido notificados</Text>
+      <Text style={styles.title}>{assignedGuard ? 'Guardia en camino' : 'Alerta enviada'}</Text>
+      
+      {assignedGuard ? (
+        <View style={styles.guardInfo}>
+          <ActivityIndicator color="#22c55e" style={{ marginBottom: 10 }} />
+          <Text style={styles.guardName}>{assignedGuard} está atendiendo tu llamado</Text>
+          <Text style={styles.subtitle}>Mantén la calma y dirígete a un lugar seguro si es posible</Text>
+        </View>
+      ) : (
+        <Text style={styles.subtitle}>Los guardias de tu zona han sido notificados</Text>
+      )}
+
       <Text style={styles.timestamp}>Activada a las {formatted}</Text>
 
       <Pressable
@@ -38,8 +68,9 @@ export default function ConfirmationScreen({ navigation, route }: Props) {
         onPress={() => navigation.navigate('Panic')}
         testID="btn-cancel"
       >
-        <Text style={styles.cancelText}>Cancelar alerta</Text>
+        <Text style={styles.cancelText}>{assignedGuard ? 'Finalizar emergencia' : 'Cancelar alerta'}</Text>
       </Pressable>
+
     </View>
   );
 }
@@ -97,4 +128,21 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 14,
   },
+  guardInfo: {
+    alignItems: 'center',
+    marginVertical: 20,
+    padding: 16,
+    backgroundColor: '#1e293b',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  guardName: {
+    color: '#22c55e',
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
 });
+

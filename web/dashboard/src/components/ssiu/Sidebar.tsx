@@ -1,5 +1,7 @@
 import { Bell, LayoutDashboard, Map, Shield, Users, BarChart3, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Simulator } from "./Simulator";
+import { Alert } from "@/data/alerts";
 
 const items = [
   { icon: LayoutDashboard, label: "Panel", active: false },
@@ -10,7 +12,11 @@ const items = [
   { icon: Settings, label: "Ajustes", active: false },
 ];
 
-export const Sidebar = () => (
+interface SidebarProps {
+  onTriggerAlert?: (alert: Alert) => void;
+}
+
+export const Sidebar = ({ onTriggerAlert }: SidebarProps) => (
   <aside className="hidden md:flex w-20 lg:w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
     <div className="h-20 flex items-center gap-3 px-5 border-b border-sidebar-border">
       <div className="w-11 h-11 rounded-xl bg-sunset shadow-glow flex items-center justify-center">
@@ -43,6 +49,12 @@ export const Sidebar = () => (
           )}
         </button>
       ))}
+      
+      {onTriggerAlert && (
+        <div className="mt-4 px-2 hidden lg:block">
+          <Simulator onTriggerAlert={onTriggerAlert} />
+        </div>
+      )}
     </nav>
 
     <div className="p-4 border-t border-sidebar-border hidden lg:block">
@@ -61,3 +73,4 @@ export const Sidebar = () => (
     </div>
   </aside>
 );
+
