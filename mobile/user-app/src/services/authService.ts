@@ -2,28 +2,41 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import type { LoginRequest, LoginResponse, User } from '../types';
 
-const AUTH_API = process.env.EXPO_PUBLIC_AUTH_API_URL ?? 'http://10.0.2.2:5001';
+const AUTH_API = (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
+  ? 'http://localhost:5233/api' 
+  : 'http://10.0.2.2:5233/api';
 
 const KEYS = {
   ACCESS_TOKEN: 'ssiu_access_token',
-  REFRESH_TOKEN: 'ssiu_refresh_token',
   USER: 'ssiu_user',
 } as const;
 
 export const authService = {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const { data } = await axios.post<LoginResponse>(
-        `${AUTH_API}/auth/login`,
-        credentials,
+      const { data } = await axios.post<any>(
+        `${AUTH_API}/Auth/login`,
+        { correo: credentials.email, password: credentials.password },
         { timeout: 8000 },
       );
+      
+      const mappedResponse: LoginResponse = {
+        accessToken: data.token,
+        refreshToken: "",
+        user: {
+            id: data.usuario.id.toString(),
+            name: data.usuario.nombre,
+            email: data.usuario.correo,
+            role: data.usuario.rol,
+            faculty: data.usuario.facultad
+        }
+      };
+
       await AsyncStorage.multiSet([
-        [KEYS.ACCESS_TOKEN, data.accessToken],
-        [KEYS.REFRESH_TOKEN, data.refreshToken],
-        [KEYS.USER, JSON.stringify(data.user)],
+        [KEYS.ACCESS_TOKEN, mappedResponse.accessToken],
+        [KEYS.USER, JSON.stringify(mappedResponse.user)],
       ]);
-      return data;
+      return mappedResponse;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
@@ -36,7 +49,7 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    await AsyncStorage.multiRemove([KEYS.ACCESS_TOKEN, KEYS.REFRESH_TOKEN, KEYS.USER]);
+    await AsyncStorage.multiRemove([KEYS.ACCESS_TOKEN, KEYS.USER]);
   },
 
   async getStoredToken(): Promise<string | null> {

@@ -14,7 +14,7 @@ const Index = () => {
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden">
-      <Sidebar onTriggerAlert={manualAddAlert} />
+      <Sidebar onTriggerAlert={manualAddAlert} alertCount={alerts.length} />
       <div className="flex-1 flex flex-col min-w-0">
 
         <TopBar />

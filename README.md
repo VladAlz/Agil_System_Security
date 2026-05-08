@@ -1,83 +1,90 @@
 # S.S.I.U. — Sistema de Seguridad Integral Universitaria
+**Universidad Técnica de Ambato (FISEI)**
 
-Universidad Técnica de Ambato — FISEI  
-Metodología: Scrum + XP | Ciclo: Abril – Agosto 2026
-
-## Estructura del Proyecto
-
-| Directorio | Descripción | Responsable |
-|---|---|---|
-| `mobile/user-app/` | App Usuarios — Botón de Pánico (Expo) | Vladimir |
-| `mobile/guard-app/` | App Guardias — Mapa y Alertas (Expo) | Wilian |
-| `web/dashboard/` | Dashboard Admin — Monitoreo (React + Vite) | Gaby |
-| `backend/` | Microservicios .NET Core 8 | Alen |
-
-## Stack Tecnológico
-
-- **Backend:** .NET Core 8 + EF Core + SQL Server + SignalR
-- **Web:** React 18 + TypeScript + Vite + TailwindCSS
-- **Mobile:** React Native + Expo + TypeScript
-- **Mapas:** Google Maps (Integración nativa e Iframe sin API Key para desarrollo)
+Este es el repositorio oficial del sistema S.S.I.U. para el **Sprint 1**. El proyecto integra un Backend en .NET 8, una base de datos SQL Server, un Dashboard administrativo Web y dos Aplicaciones Móviles.
 
 ---
 
-## Resultados del Sprint 1 (MVP Interfaces)
-Durante el Sprint 1 se finalizaron las interfaces principales y los flujos simulados (Mock Data) para la presentación:
-1. **App Usuarios:** Interfaz de login, botón de pánico con retardo de seguridad y pantalla de confirmación.
-2. **Dashboard Web:** Interfaz administrativa de monitoreo, lista de alertas en tiempo real simulada y panel de detalles con **Google Maps Satelital** centrado en la UTA (-1.267584, -78.624025).
-3. **App Guardias:** Dashboard móvil para guardias con visualización de alertas y mapa táctico integrado.
+## 🚀 Estado del Proyecto: Sprint 1 (Integración Completa)
 
-*(Nota: La integración real con la base de datos y SignalR se abordará en el Sprint 2).*
+El sistema ha superado la fase de maqueta y ahora es **funcional al 100%** con datos reales persistidos en SQL Server.
+
+### Componentes Activos:
+*   **Backend:** API REST + SignalR (Real-time).
+*   **Web Dashboard:** Panel de monitoreo para Administradores.
+*   **User App:** Aplicación para estudiantes con botón de pánico de 3 segundos.
+*   **Guard App:** Aplicación para guardias con notificaciones en tiempo real.
 
 ---
 
-## Guía de Instalación y Ejecución (Para el Equipo)
+## 🛠️ Guía de Instalación y Ejecución
 
-Para ver los resultados del Sprint 1, cada miembro debe ejecutar los 3 proyectos simultáneamente en terminales separadas.
+Para que el equipo pueda correr el proyecto completo localmente, sigan estos pasos:
 
-### Requisitos Previos
-- Tener instalado **Node.js** (v18+ recomendado).
-- (Opcional) Instalar la app "Expo Go" en tu celular para escanear los códigos QR.
+### 1. Requisitos Previos
+*   **SQL Server Express 2022** (Instalado y corriendo localmente).
+*   **.NET 8 SDK**.
+*   **Node.js v18+**.
+*   **Expo Go** (Opcional, para probar en celular físico).
 
-### 1. Ejecutar el Dashboard Web (Administradores)
-Abre una terminal y ejecuta:
+### 2. Levantar el Backend (Cerebro)
+El backend debe estar encendido para que todo lo demás funcione.
+```bash
+cd backend/Ssiu.Api
+dotnet run
+```
+*   **URL:** `http://localhost:5233`
+*   **Swagger:** `http://localhost:5233/swagger`
+
+### 3. Levantar el Dashboard Web (Administración)
 ```bash
 cd web/dashboard
 npm install
-npm run dev -- --force
+npm run dev
 ```
-👉 Abre tu navegador en la URL que indique la terminal (ej: `http://localhost:8080` o `http://localhost:8083`).
+*   **URL:** `http://localhost:8080` (o el puerto que asigne Vite).
+*   **Login:** `admin@uta.edu.ec` / `admin123`
 
-### 2. Ejecutar la App de Usuarios (Botón de Pánico)
-Abre una **nueva** terminal y ejecuta:
+### 4. Levantar Aplicaciones Móviles (Usuario y Guardia)
+Deben abrirse en terminales separadas:
+
+**App del Usuario:**
 ```bash
 cd mobile/user-app
 npm install
-npx expo start
+npx expo start --web
 ```
-👉 Presiona `w` en la terminal para abrirlo en el navegador web (ej: `localhost:8081`), o escanea el QR con Expo Go.
+*   **Login:** `estudiante@uta.edu.ec` / `student123`
 
-### 3. Ejecutar la App de Guardias
-Abre una **tercera** terminal y ejecuta:
+**App del Guardia:**
 ```bash
 cd mobile/guard-app
-npm install --legacy-peer-deps
-npx expo start
+npm install
+npx expo start --web
 ```
-*(Nota: usamos `--legacy-peer-deps` en guard-app para evitar conflictos de dependencias con React Navigation).*
-👉 Presiona `w` en la terminal para abrirlo en el navegador web (ej: `localhost:8082`), o escanea el QR con Expo Go.
+*   **Login:** `guardia1@uta.edu.ec` / `guard123`
 
 ---
 
-## Sprints
+## 📋 Pendientes para el Cierre Total (Último 5%)
 
-| Sprint | Período | Meta |
-|---|---|---|
-| Sprint 0 | 27–28 Abr | Infraestructura y entornos |
-| Sprint 1 | 29 Abr – 12 May | Auth JWT simulada · Botón de Pánico · UI Dashboard · Mapa UTA |
-| Sprint 2 | TBD | Integración .NET Backend, Base de Datos SQL y SignalR |
-| Sprint 3 | TBD | Cierre, QA y despliegue |
+Como **Tech Lead**, he identificado las últimas tareas para llegar al 100% de la planificación oficial del Sprint 1:
 
-## Daily Standup
+### 🔴 [TAREA T04-02] — Algoritmo de Detección de Zona
+*   **Responsable:** **Willian**
+*   **Descripción:** Actualmente, las alertas se asignan a la "Zona 1" por defecto. Falta implementar el algoritmo matemático en el `AlertsController.cs` para que, según las coordenadas GPS enviadas por el estudiante, el sistema identifique automáticamente si pertenece a la Zona 1, 2, 3 o 4.
 
-Todos los días a las 22:00h — máximo 15 minutos.
+### 🔴 [TAREA T02-09/10] — Pruebas de Calidad (QA)
+*   **Responsable:** **Vladimir**
+*   **Descripción:** Se requiere crear el archivo formal de pruebas unitarias para el módulo de alertas. Se debe verificar que:
+    1. La alerta se cree correctamente en la BD.
+    2. La notificación llegue al SignalR Hub.
+    3. El sistema rechace coordenadas fuera del campus.
+
+---
+
+## 👥 Equipo de Desarrollo
+*   **Alen:** Tech Lead / Backend & Arquitectura.
+*   **Gaby:** Frontend Web / Dashboard.
+*   **Willian:** Mobile Developer (Guard App).
+*   **Vladimir:** Mobile Developer (User App) / QA Manager.

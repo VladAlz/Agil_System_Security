@@ -10,11 +10,31 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Panic'>;
 export default function PanicScreen({ navigation }: Props) {
   const { user } = useAuth();
 
-  const handleConfirm = () => {
-    navigation.navigate('Confirmation', {
-      timestamp: new Date().toISOString(),
-      userId: user?.id ?? '',
-    });
+  const handleConfirm = async () => {
+    try {
+      const alertData = {
+        usuarioId: parseInt(user?.id ?? "0"),
+        lat: -1.2665, // En un caso real aquí iría el GPS del celular
+        lng: -78.6245
+      };
+
+      const BASE_URL = (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
+        ? 'http://localhost:5233/api' 
+        : 'http://10.0.2.2:5233/api';
+
+      await fetch(`${BASE_URL}/Alerts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(alertData)
+      });
+
+      navigation.navigate('Confirmation', {
+        timestamp: new Date().toISOString(),
+        userId: user?.id ?? '',
+      });
+    } catch (error) {
+      console.error("Error sending panic alert:", error);
+    }
   };
 
   return (

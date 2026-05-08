@@ -17,19 +17,32 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulación de login - Sprint 1
-    setTimeout(() => {
-      if (email === "admin@ssiu.uta" && password === "admin123") {
-        localStorage.setItem("ssiu_token", "dummy-jwt-token");
-        toast.success("Bienvenido al Sistema de Seguridad");
+    try {
+      const response = await fetch("http://localhost:5233/api/Auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo: email, password })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem("ssiu_token", data.token);
+        localStorage.setItem("ssiu_user", JSON.stringify(data.usuario));
+        toast.success(`Bienvenido, ${data.usuario.nombre}`);
         navigate("/");
       } else {
+        const errorData = await response.json();
         toast.error("Credenciales incorrectas", {
-          description: "Por favor verifica tu correo y contraseña."
+          description: errorData.mensaje || "Por favor verifica tu correo y contraseña."
         });
       }
+    } catch (error) {
+      toast.error("Error de conexión", {
+        description: "No se pudo conectar con el servidor backend."
+      });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -57,7 +70,7 @@ const Login = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@ssiu.uta"
+                  placeholder="admin@uta.edu.ec"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 bg-[#0f172a]/50 border-[#334155] text-white focus:border-destructive/50 transition-all"

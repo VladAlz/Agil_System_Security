@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FlatList, 
   StyleSheet, 
@@ -9,6 +9,7 @@ import {
   Dimensions
 } from 'react-native';
 import { Shield, MapPin, Clock, ChevronRight, Navigation } from 'lucide-react-native';
+import * as signalR from '@microsoft/signalr';
 
 import { LeafletMap } from '../components/LeafletMap';
 
@@ -53,8 +54,71 @@ const INITIAL_ALERTS: Alert[] = [
   },
 ];
 
+const IS_WEB = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const API_URL = IS_WEB ? "http://localhost:5233/api" : "http://10.0.2.2:5233/api";
+const HUB_URL = IS_WEB ? "http://localhost:5233/alerthub" : "http://10.0.2.2:5233/alerthub";
+
 export default function DashboardScreen({ navigation }: any) {
-  const [alerts, setAlerts] = useState<Alert[]>(INITIAL_ALERTS);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAlerts();
+
+    // Configurar SignalR
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(HUB_URL)
+      .withAutomaticReconnect()
+      .build();
+
+    connection.start()
+      .then(() => {
+        console.log("Connected to SignalR from Guard App");
+        // Unirse al grupo de guardias (en el backend lo manejamos por zona o general)
+        connection.invoke("JoinAdminGroup").catch(err => console.error(err));
+
+        connection.on("ReceiveAlert", (bAlert: any) => {
+          const mapped: Alert = {
+            id: bAlert.id.toString(),
+            user: bAlert.usuario?.nombre || "Desconocido",
+            location: bAlert.zona?.nombre || "Ubicación desconocida",
+            time: "Ahora",
+            type: "Pánico",
+            severity: "High",
+            coords: { x: 50, y: 50 }
+          };
+          setAlerts(prev => [mapped, ...prev]);
+        });
+      })
+      .catch(err => console.error("SignalR Connection Error: ", err));
+
+    return () => {
+      connection.stop();
+    };
+  }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      const response = await fetch(`${API_URL}/Alerts`);
+      const data = await response.json();
+      
+      const mappedData: Alert[] = data.map((bAlert: any) => ({
+        id: bAlert.id.toString(),
+        user: bAlert.usuario?.nombre || "Desconocido",
+        location: bAlert.zona?.nombre || "Ubicación desconocida",
+        time: "Ahora",
+        type: "Pánico",
+        severity: "High",
+        coords: { x: 50, y: 50 } // Visual mock
+      }));
+      
+      setAlerts(mappedData);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const mapMarkers = alerts.map((a: Alert) => ({
     id: a.id,
