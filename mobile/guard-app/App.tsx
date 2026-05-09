@@ -1,45 +1,73 @@
+import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import React from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text } from 'react-native';
 
+import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AlertDetailScreen from './src/screens/AlertDetailScreen';
+import AlertListScreen from './src/screens/AlertListScreen';
+import MapScreen from './src/screens/MapScreen';
+
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 export type GuardStackParamList = {
   Login: undefined;
   Dashboard: undefined;
+  AlertList: undefined;
   AlertDetail: { alertId: string };
+  Map: undefined;
 };
 
 const Stack = createNativeStackNavigator<GuardStackParamList>();
 
-export default function App() {
+function LoadingScreen() {
   return (
-    // @ts-expect-error Types mismatch in React 19 with React Navigation
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: '#0f172a',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      <ActivityIndicator color="#ef4444" size="large" />
+    </View>
+  );
+}
+
+function AppNavigator() {
+  const { loading, isAuthenticated } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="AlertDetail" component={AlertDetailScreen} />
+        {isAuthenticated ? (
+          <>
+            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="AlertList" component={AlertListScreen} />
+            <Stack.Screen name="AlertDetail" component={AlertDetailScreen} />
+            <Stack.Screen name="Map" component={MapScreen} />
+          </>
+        ) : (
+          <Stack.Screen name="Login" component={LoginScreen} />
+        )}
       </Stack.Navigator>
+
       <StatusBar style="light" />
     </NavigationContainer>
   );
 }
 
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    color: '#f1f5f9',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-});
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
+  );
+}

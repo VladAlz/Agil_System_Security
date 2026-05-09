@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "guard-app",
+    "slug": "guard-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "guardapp",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "La app necesita acceder a tu ubicación para mostrar la posición actual del guardia en el mapa."
+      }
+    },
+    "android": {
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

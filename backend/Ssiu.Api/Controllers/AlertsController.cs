@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Ssiu.Api.Data;
 using Ssiu.Api.Hubs;
 using Ssiu.Api.Models;
-using Ssiu.Api.Services;
 
 namespace Ssiu.Api.Controllers
 {
@@ -15,29 +14,125 @@ namespace Ssiu.Api.Controllers
         public double Lng { get; set; }
     }
 
+    public class UpdateAlertStatusDto
+    {
+        public string Estado { get; set; } = string.Empty;
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     public class AlertsController : ControllerBase
     {
-        private readonly IAlertService _alertService;
+        private readonly AppDbContext _context;
+        private readonly IHubContext<AlertHub> _hubContext;
 
-        public AlertsController(IAlertService alertService)
+        public AlertsController(AppDbContext context, IHubContext<AlertHub> hubContext)
         {
-            _alertService = alertService;
+            _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateAlert([FromBody] CreateAlertDto dto)
         {
-            var alert = await _alertService.CreateAlertAsync(dto.UsuarioId, dto.Lat, dto.Lng);
-            return Ok(alert);
+            // En una versión más avanzada, la zona se calcularía dinámicamente.
+            // Para el Sprint 1, asignamos la zona 1 por defecto o según la lógica del guardia.
+            var zonaAsignada = 1;
+
+            var alert = new Alert
+            {
+                UsuarioId = dto.UsuarioId,
+                ZonaId = zonaAsignada,
+                Lat = dto.Lat,
+                Lng = dto.Lng,
+                Estado = "Activa",
+                FechaHora = DateTime.UtcNow
+            };
+
+            _context.Alerts.Add(alert);
+            await _context.SaveChangesAsync();
+
+            var alertWithDetails = await _context.Alerts
+                .Include(a => a.Usuario)
+                .Include(a => a.Zona)
+                .FirstOrDefaultAsync(a => a.Id == alert.Id);
+
+            // Notificar a los guardias de la zona
+            await _hubContext.Clients.Group($"zona_{zonaAsignada}")
+                .SendAsync("ReceiveAlert", alertWithDetails);
+
+            // Notificar a los administradores
+            await _hubContext.Clients.Group("admins")
+                .SendAsync("ReceiveAlert", alertWithDetails);
+
+            return Ok(alertWithDetails);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAlerts()
         {
-            var alerts = await _alertService.GetAlertsAsync();
+            var alerts = await _context.Alerts
+                .Include(a => a.Usuario)
+                .Include(a => a.Zona)
+                .OrderByDescending(a => a.FechaHora)
+                .ToListAsync();
+
             return Ok(alerts);
         }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetAlertById(int id)
+        {
+            var alert = await _context.Alerts
+                .Include(a => a.Usuario)
+                .Include(a => a.Zona)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (alert == null)
+            {
+                return NotFound(new { mensaje = "Alerta no encontrada" });
+            }
+
+            return Ok(alert);
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateAlertStatus(int id, [FromBody] UpdateAlertStatusDto dto)
+        {
+            var alert = await _context.Alerts
+                .Include(a => a.Usuario)
+                .Include(a => a.Zona)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (alert == null)
+            {
+                return NotFound(new { mensaje = "Alerta no encontrada" });
+            }
+
+            var estadosPermitidos = new[] 
+            { 
+                "Activa", 
+                "En Camino", 
+                "Atendida", 
+                "Cancelada" 
+            };
+
+            if (!estadosPermitidos.Contains(dto.Estado))
+            {
+                return BadRequest(new
+                {
+                    mensaje = "Estado no válido. Use: Activa, En Camino, Atendida o Cancelada"
+                });
+            }
+
+            alert.Estado = dto.Estado;
+            await _context.SaveChangesAsync();
+
+            // Opcional: Notificar el cambio de estado vía SignalR
+            await _hubContext.Clients.Group("admins").SendAsync("AlertStatusUpdated", alert);
+            await _hubContext.Clients.Group($"zona_{alert.ZonaId}").SendAsync("AlertStatusUpdated", alert);
+
+            return Ok(alert);
+        }
     }
-}
+}

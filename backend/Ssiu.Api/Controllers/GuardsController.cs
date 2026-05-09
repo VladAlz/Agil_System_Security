@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ssiu.Api.Data;
-using Ssiu.Api.Services;
 
 namespace Ssiu.Api.Controllers
 {
@@ -14,20 +13,59 @@ namespace Ssiu.Api.Controllers
     [Route("api/[controller]")]
     public class GuardsController : ControllerBase
     {
-        private readonly IGuardService _guardService;
+        private readonly AppDbContext _context;
 
-        public GuardsController(IGuardService guardService)
+        public GuardsController(AppDbContext context)
         {
-            _guardService = guardService;
+            _context = context;
         }
 
-        [HttpPut("{id}/estado")]
+        [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
         {
-            var success = await _guardService.UpdateStatusAsync(id, dto.Estado);
-            if (!success) return NotFound();
+            var guard = await _context.Guards
+                .Include(g => g.Usuario)
+                .Include(g => g.Zona)
+                .FirstOrDefaultAsync(g => g.Id == id);
 
-            return Ok(new { mensaje = "Estado actualizado correctamente" });
+            if (guard == null)
+            {
+                return NotFound(new { mensaje = "Guardia no encontrado" });
+            }
+
+            var estadosPermitidos = new[] { "En Servicio", "Descansando" };
+
+            if (!estadosPermitidos.Contains(dto.Estado))
+            {
+                return BadRequest(new
+                {
+                    mensaje = "Estado no válido. Use: En Servicio o Descansando"
+                });
+            }
+
+            guard.Estado = dto.Estado;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                guard.Id,
+                guard.UsuarioId,
+                guard.ZonaId,
+                Estado = guard.Estado,
+                Usuario = guard.Usuario == null ? null : new
+                {
+                    guard.Usuario.Id,
+                    guard.Usuario.Nombre,
+                    guard.Usuario.Correo,
+                    guard.Usuario.Rol
+                },
+                Zona = guard.Zona == null ? null : new
+                {
+                    guard.Zona.Id,
+                    guard.Zona.Nombre,
+                    guard.Zona.Color
+                }
+            });
         }
     }
 }
