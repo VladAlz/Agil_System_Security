@@ -1,16 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FlatList, 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  View, 
-  SafeAreaView, 
-  Dimensions
-} from 'react-native';
-import { Shield, MapPin, Clock, ChevronRight, Navigation } from 'lucide-react-native';
-import * as signalR from '@microsoft/signalr';
+import { useAuth } from '../context/AuthContext';
 
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  Dimensions,
+} from 'react-native';
+
+import {
+  MapPin,
+  ChevronRight,
+  Navigation,
+  LogOut,
+} from 'lucide-react-native';
+
+import * as signalR from '@microsoft/signalr';
 import { LeafletMap } from '../components/LeafletMap';
 
 const { width } = Dimensions.get('window');
@@ -25,72 +33,62 @@ interface Alert {
   coords: { x: number; y: number };
 }
 
-// Mapeo simple de coordenadas relativas a Lat/Lng para la UTA centradas en los bloques principales
-const getLatLng = (x: number, y: number): { lat: number, lng: number } => {
+const getLatLng = (x: number, y: number): { lat: number; lng: number } => {
   return {
-    lat: -1.267584 - ((y - 50) / 100) * 0.0050,
-    lng: -78.624025 + ((x - 50) / 100) * 0.0050
+    lat: -1.267584 - ((y - 50) / 100) * 0.005,
+    lng: -78.624025 + ((x - 50) / 100) * 0.005,
   };
 };
 
-const INITIAL_ALERTS: Alert[] = [
-  {
-    id: 'a-1042',
-    user: 'Camila Reinoso',
-    location: 'Parqueadero Norte · FISEI',
-    time: '2 min',
-    type: 'Pánico',
-    severity: 'High',
-    coords: { x: 35, y: 42 }
-  },
-  {
-    id: 'a-1040',
-    user: 'Sofía Mena',
-    location: 'Sendero Este',
-    time: '5 min',
-    type: 'Sospecha',
-    severity: 'Medium',
-    coords: { x: 65, y: 58 }
-  },
-];
+const IS_WEB =
+  typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
-const IS_WEB = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-const API_URL = IS_WEB ? "http://localhost:5233/api" : "http://10.0.2.2:5233/api";
-const HUB_URL = IS_WEB ? "http://localhost:5233/alerthub" : "http://10.0.2.2:5233/alerthub";
+const API_URL = IS_WEB
+  ? 'http://localhost:5233/api'
+  : 'http://10.0.2.2:5233/api';
+
+const HUB_URL = IS_WEB
+  ? 'http://localhost:5233/alerthub'
+  : 'http://10.0.2.2:5233/alerthub';
 
 export default function DashboardScreen({ navigation }: any) {
+  const { guard, logout } = useAuth();
+
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchAlerts();
 
-    // Configurar SignalR
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(HUB_URL)
       .withAutomaticReconnect()
       .build();
 
-    connection.start()
+    connection
+      .start()
       .then(() => {
-        console.log("Connected to SignalR from Guard App");
-        // Unirse al grupo de guardias (en el backend lo manejamos por zona o general)
-        connection.invoke("JoinAdminGroup").catch(err => console.error(err));
+        console.log('Connected to SignalR from Guard App');
 
-        connection.on("ReceiveAlert", (bAlert: any) => {
+        connection
+          .invoke('JoinAdminGroup')
+          .catch((err) => console.error(err));
+
+        connection.on('ReceiveAlert', (bAlert: any) => {
           const mapped: Alert = {
             id: bAlert.id.toString(),
-            user: bAlert.usuario?.nombre || "Desconocido",
-            location: bAlert.zona?.nombre || "Ubicación desconocida",
-            time: "Ahora",
-            type: "Pánico",
-            severity: "High",
-            coords: { x: 50, y: 50 }
+            user: bAlert.usuario?.nombre || 'Desconocido',
+            location: bAlert.zona?.nombre || 'Ubicación desconocida',
+            time: 'Ahora',
+            type: 'Pánico',
+            severity: 'High',
+            coords: { x: 50, y: 50 },
           };
-          setAlerts(prev => [mapped, ...prev]);
+
+          setAlerts((prev) => [mapped, ...prev]);
         });
       })
-      .catch(err => console.error("SignalR Connection Error: ", err));
+      .catch((err) => console.error('SignalR Connection Error: ', err));
 
     return () => {
       connection.stop();
@@ -101,63 +99,76 @@ export default function DashboardScreen({ navigation }: any) {
     try {
       const response = await fetch(`${API_URL}/Alerts`);
       const data = await response.json();
-      
+
       const mappedData: Alert[] = data.map((bAlert: any) => ({
         id: bAlert.id.toString(),
-        user: bAlert.usuario?.nombre || "Desconocido",
-        location: bAlert.zona?.nombre || "Ubicación desconocida",
-        time: "Ahora",
-        type: "Pánico",
-        severity: "High",
-        coords: { x: 50, y: 50 } // Visual mock
+        user: bAlert.usuario?.nombre || 'Desconocido',
+        location: bAlert.zona?.nombre || 'Ubicación desconocida',
+        time: 'Ahora',
+        type: 'Pánico',
+        severity: 'High',
+        coords: { x: 50, y: 50 },
       }));
-      
+
       setAlerts(mappedData);
     } catch (error) {
-      console.error("Error fetching alerts:", error);
+      console.error('Error fetching alerts:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
   };
 
   const mapMarkers = alerts.map((a: Alert) => ({
     id: a.id,
     ...getLatLng(a.coords.x, a.coords.y),
     title: a.user,
-    severity: a.severity
+    severity: a.severity,
   }));
 
   const renderItem = ({ item }: { item: Alert }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.alertCard}
       onPress={() => navigation.navigate('AlertDetail', { alertId: item.id })}
     >
-      <View style={[styles.severityBar, { backgroundColor: item.severity === 'High' ? '#ef4444' : '#f59e0b' }]} />
+      <View
+        style={[
+          styles.severityBar,
+          {
+            backgroundColor:
+              item.severity === 'High' ? '#ef4444' : '#f59e0b',
+          },
+        ]}
+      />
+
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.userName}>{item.user}</Text>
           <Text style={styles.alertType}>{item.type}</Text>
         </View>
-        
+
         <View style={styles.infoRow}>
           <MapPin size={14} color="#94a3b8" />
           <Text style={styles.infoText}>{item.location}</Text>
         </View>
       </View>
+
       <ChevronRight size={20} color="#334155" />
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Mapa real con Google Maps */}
       <View style={styles.mapContainer}>
-        <LeafletMap 
-          centerLat={-1.267584} 
-          centerLng={-78.624025} 
+        <LeafletMap
+          centerLat={-1.267584}
+          centerLng={-78.624025}
           markers={mapMarkers}
         />
-        
+
         <View style={styles.mapBadge}>
           <Navigation size={14} color="#fff" />
           <Text style={styles.mapBadgeText}>GPS Activo · Zona 2</Text>
@@ -166,11 +177,19 @@ export default function DashboardScreen({ navigation }: any) {
 
       <View style={styles.content}>
         <View style={styles.header}>
-          <View>
+          <View style={styles.headerInfo}>
             <Text style={styles.title}>Panel de Control</Text>
-            <Text style={styles.subtitle}>Guardia: G. Ramírez</Text>
+            <Text style={styles.subtitle}>
+              Guardia: {guard?.nombre || 'Guardia'}
+            </Text>
           </View>
-          <View style={styles.statsRow}>
+
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <LogOut size={16} color="#f8fafc" />
+              <Text style={styles.logoutText}>Salir</Text>
+            </TouchableOpacity>
+
             <View style={styles.miniStat}>
               <Text style={styles.miniStatNum}>{alerts.length}</Text>
               <Text style={styles.miniStatLabel}>Activas</Text>
@@ -179,13 +198,18 @@ export default function DashboardScreen({ navigation }: any) {
         </View>
 
         <Text style={styles.sectionTitle}>Alertas Recientes</Text>
-        
+
         <FlatList
           data={alerts}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              No existen alertas recientes.
+            </Text>
+          }
         />
       </View>
     </SafeAreaView>
@@ -234,9 +258,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 24,
     marginBottom: 20,
+    gap: 12,
+  },
+  headerInfo: {
+    flex: 1,
   },
   title: {
     color: '#f1f5f9',
@@ -246,9 +274,25 @@ const styles = StyleSheet.create({
   subtitle: {
     color: '#64748b',
     fontSize: 13,
+    marginTop: 4,
   },
-  statsRow: {
+  headerActions: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  logoutButton: {
+    backgroundColor: '#334155',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logoutText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '800',
   },
   miniStat: {
     backgroundColor: '#1e293b',
@@ -331,5 +375,11 @@ const styles = StyleSheet.create({
   infoText: {
     color: '#94a3b8',
     fontSize: 13,
+  },
+  emptyText: {
+    color: '#64748b',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

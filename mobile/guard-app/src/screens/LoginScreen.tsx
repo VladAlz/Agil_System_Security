@@ -9,15 +9,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
-const IS_WEB = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+export default function LoginScreen() {
+  const { login } = useAuth();
 
-const API_URL = IS_WEB
-  ? 'http://localhost:5233/api'
-  : 'http://10.0.2.2:5233/api';
-
-export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -34,33 +30,7 @@ export default function LoginScreen({ navigation }: any) {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/Auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          correo: email.trim(),
-          password: password.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.mensaje || 'Credenciales incorrectas');
-      }
-
-      if (data.usuario?.rol !== 'Guardia') {
-        throw new Error('Este usuario no pertenece al módulo Guardia');
-      }
-
-      await AsyncStorage.multiSet([
-        ['guard_token', data.token],
-        ['guard_user', JSON.stringify(data.usuario)],
-      ]);
-
-      navigation.replace('Dashboard');
+      await login(email, password);
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {
@@ -75,6 +45,7 @@ export default function LoginScreen({ navigation }: any) {
     >
       <View style={styles.card}>
         <Text style={styles.title}>S.S.I.U.</Text>
+
         <Text style={styles.subtitle}>
           Acceso Guardia{'\n'}Universidad Técnica de Ambato
         </Text>
