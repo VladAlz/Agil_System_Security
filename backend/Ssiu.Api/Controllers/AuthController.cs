@@ -38,6 +38,10 @@ namespace Ssiu.Api.Controllers
 
             var token = GenerateJwt(user);
 
+            var guard = await _context.Guards
+                .Include(g => g.Zona)
+                .FirstOrDefaultAsync(g => g.UsuarioId == user.Id);
+
             return Ok(new LoginResponse
             {
                 Token = token,
@@ -47,7 +51,12 @@ namespace Ssiu.Api.Controllers
                     user.Nombre,
                     user.Correo,
                     user.Rol,
-                    user.Facultad
+                    user.Facultad,
+                    GuardId = guard != null ? guard.Id : (int?)null,
+                    ZonaId = guard != null ? guard.ZonaId : (int?)null,
+                    ZonaNombre = guard != null && guard.Zona != null ? guard.Zona.Nombre : null,
+                    ZonaColor = guard != null && guard.Zona != null ? guard.Zona.Color : null,
+                    Estado = guard != null ? guard.Estado : null
                 }
             });
         }

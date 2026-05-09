@@ -8,6 +8,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   login: (correo: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateGuardStatus: (nuevoEstado: string) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +53,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setGuard(null);
   };
 
+  const updateGuardStatus = (nuevoEstado: string) => {
+    setGuard((prev) => {
+      if (!prev) return prev;
+
+      const updatedGuard = {
+        ...prev,
+        estado: nuevoEstado,
+      };
+
+      return updatedGuard;
+     });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -61,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated,
         login,
         logout,
+        updateGuardStatus,
       }}
     >
       {children}

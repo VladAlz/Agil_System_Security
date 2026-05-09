@@ -21,15 +21,52 @@ namespace Ssiu.Api.Controllers
         }
 
         [HttpPut("{id}/estado")]
+        [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
         {
-            var guard = await _context.Guards.FindAsync(id);
-            if (guard == null) return NotFound();
+            var guard = await _context.Guards
+                .Include(g => g.Usuario)
+                .Include(g => g.Zona)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (guard == null)
+            {
+                return NotFound(new { mensaje = "Guardia no encontrado" });
+            }
+
+            var estadosPermitidos = new[] { "En Servicio", "Descansando" };
+
+            if (!estadosPermitidos.Contains(dto.Estado))
+            {
+                return BadRequest(new
+                {
+                    mensaje = "Estado no válido. Use: En Servicio o Descansando"
+                });
+            }
 
             guard.Estado = dto.Estado;
             await _context.SaveChangesAsync();
 
-            return Ok(guard);
+            return Ok(new
+            {
+                guard.Id,
+                guard.UsuarioId,
+                guard.ZonaId,
+                Estado = guard.Estado,
+                Usuario = guard.Usuario == null ? null : new
+                {
+                    guard.Usuario.Id,
+                    guard.Usuario.Nombre,
+                    guard.Usuario.Correo,
+                    guard.Usuario.Rol
+                },
+                Zona = guard.Zona == null ? null : new
+                {
+                    guard.Zona.Id,
+                    guard.Zona.Nombre,
+                    guard.Zona.Color
+                }
+            });
         }
     }
 }

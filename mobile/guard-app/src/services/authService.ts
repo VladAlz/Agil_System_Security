@@ -12,7 +12,11 @@ export type GuardUser = {
   correo: string;
   rol: string;
   facultad: string;
+  guardId?: number;
   zonaId?: number;
+  zonaNombre?: string;
+  zonaColor?: string;
+  estado?: string;
 };
 
 export type LoginResponse = {

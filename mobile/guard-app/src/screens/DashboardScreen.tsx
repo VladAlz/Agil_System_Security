@@ -9,6 +9,7 @@ import {
   View,
   SafeAreaView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 
 import {
@@ -16,6 +17,7 @@ import {
   ChevronRight,
   Navigation,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react-native';
 
 import * as signalR from '@microsoft/signalr';
@@ -52,10 +54,14 @@ const HUB_URL = IS_WEB
   : 'http://10.0.2.2:5233/alerthub';
 
 export default function DashboardScreen({ navigation }: any) {
-  const { guard, logout } = useAuth();
+  const { guard, logout, updateGuardStatus } = useAuth();
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [changingStatus, setChangingStatus] = useState(false);
+
+  const estadoActual = guard?.estado || 'Descansando';
+  const estaDisponible = estadoActual === 'En Servicio';
 
   useEffect(() => {
     fetchAlerts();
@@ -70,9 +76,7 @@ export default function DashboardScreen({ navigation }: any) {
       .then(() => {
         console.log('Connected to SignalR from Guard App');
 
-        connection
-          .invoke('JoinAdminGroup')
-          .catch((err) => console.error(err));
+        connection.invoke('JoinAdminGroup').catch((err) => console.error(err));
 
         connection.on('ReceiveAlert', (bAlert: any) => {
           const mapped: Alert = {
@@ -115,6 +119,48 @@ export default function DashboardScreen({ navigation }: any) {
       console.error('Error fetching alerts:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    if (!guard?.guardId) {
+      alert('Este usuario no tiene registro de guardia asignado.');
+      return;
+    }
+
+    const estadoAnterior = estadoActual;
+    const nuevoEstado =
+      estadoActual === 'En Servicio' ? 'Descansando' : 'En Servicio';
+
+    setChangingStatus(true);
+
+    // Cambio optimista
+    updateGuardStatus(nuevoEstado);
+
+    try {
+      const response = await fetch(`${API_URL}/Guards/${guard.guardId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          estado: nuevoEstado,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.mensaje || 'No se pudo actualizar el estado');
+      }
+
+      updateGuardStatus(data.estado || nuevoEstado);
+    } catch (error: any) {
+      // Revertir si falla
+      updateGuardStatus(estadoAnterior);
+      alert(error.message || 'Error al actualizar el estado');
+    } finally {
+      setChangingStatus(false);
     }
   };
 
@@ -171,7 +217,9 @@ export default function DashboardScreen({ navigation }: any) {
 
         <View style={styles.mapBadge}>
           <Navigation size={14} color="#fff" />
-          <Text style={styles.mapBadgeText}>GPS Activo · Zona 2</Text>
+          <Text style={styles.mapBadgeText}>
+            GPS Activo · {guard?.zonaNombre || 'Sin zona'}
+          </Text>
         </View>
       </View>
 
@@ -182,6 +230,26 @@ export default function DashboardScreen({ navigation }: any) {
             <Text style={styles.subtitle}>
               Guardia: {guard?.nombre || 'Guardia'}
             </Text>
+
+            <View style={styles.zoneRow}>
+              <View style={styles.zoneBadge}>
+                <Text style={styles.zoneText}>
+                  {guard?.zonaNombre || 'Zona no asignada'}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: estaDisponible ? '#16a34a' : '#475569',
+                  },
+                ]}
+              >
+                <ShieldCheck size={13} color="#fff" />
+                <Text style={styles.statusText}>{estadoActual}</Text>
+              </View>
+            </View>
           </View>
 
           <View style={styles.headerActions}>
@@ -196,6 +264,27 @@ export default function DashboardScreen({ navigation }: any) {
             </View>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={[
+            styles.statusButton,
+            {
+              backgroundColor: estaDisponible ? '#475569' : '#16a34a',
+            },
+          ]}
+          onPress={handleToggleStatus}
+          disabled={changingStatus}
+        >
+          {changingStatus ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.statusButtonText}>
+              {estaDisponible
+                ? 'Cambiar a Descansando'
+                : 'Cambiar a En Servicio'}
+            </Text>
+          )}
+        </TouchableOpacity>
 
         <Text style={styles.sectionTitle}>Alertas Recientes</Text>
 
@@ -260,7 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 24,
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 12,
   },
   headerInfo: {
@@ -275,6 +364,38 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 13,
     marginTop: 4,
+  },
+  zoneRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  zoneBadge: {
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  zoneText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  statusBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
   },
   headerActions: {
     alignItems: 'flex-end',
@@ -312,6 +433,19 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 9,
     fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  statusButton: {
+    marginHorizontal: 24,
+    marginBottom: 18,
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  statusButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '900',
     textTransform: 'uppercase',
   },
   sectionTitle: {
