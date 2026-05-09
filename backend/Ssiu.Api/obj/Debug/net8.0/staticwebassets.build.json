@@ -1,11 +1,1 @@
-{
-  "Version": 1,
-  "Hash": "Zdo3T2lbFtLxuqIow43QdHrSEg3IzbqDKGoZ0by4qBM=",
-  "Source": "Ssiu.Api",
-  "BasePath": "_content/Ssiu.Api",
-  "Mode": "Default",
-  "ManifestType": "Build",
-  "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
-  "Assets": []
-}
+{"Version":1,"Hash":"2pSOdykRQaKNvg9/eQMEDTZBRrx53RhJe2Q/SjImyl4=","Source":"Ssiu.Api","BasePath":"/","Mode":"Root","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}

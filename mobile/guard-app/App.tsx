@@ -2,8 +2,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text } from 'react-native';
 
+import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AlertDetailScreen from './src/screens/AlertDetailScreen';
 
@@ -17,29 +17,17 @@ const Stack = createNativeStackNavigator<GuardStackParamList>();
 
 export default function App() {
   return (
-    // @ts-expect-error Types mismatch in React 19 with React Navigation
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        initialRouteName="Login"
+        screenOptions={{ headerShown: false }}
+      >
+        <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Dashboard" component={DashboardScreen} />
         <Stack.Screen name="AlertDetail" component={AlertDetailScreen} />
       </Stack.Navigator>
+
       <StatusBar style="light" />
     </NavigationContainer>
   );
 }
-
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    color: '#f1f5f9',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-});

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Ssiu.Api.Data;
 using Ssiu.Api.Dtos;
+using Ssiu.Api.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -25,24 +26,89 @@ namespace Ssiu.Api.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Correo == request.Correo);
+            var correo = request.Correo.Trim().ToLower();
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Correo.ToLower() == correo);
+
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return Unauthorized(new { mensaje = "Correo o contraseña incorrectos" });
             }
 
             var token = GenerateJwt(user);
-            
+
             return Ok(new LoginResponse
             {
                 Token = token,
-                Usuario = new { user.Id, user.Nombre, user.Correo, user.Rol, user.Facultad }
+                Usuario = new
+                {
+                    user.Id,
+                    user.Nombre,
+                    user.Correo,
+                    user.Rol,
+                    user.Facultad
+                }
             });
         }
 
-        private string GenerateJwt(Models.User user)
+        [HttpPost("register-guard")]
+        public async Task<IActionResult> RegisterGuard([FromBody] RegisterGuardRequest request)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "ClaveSuperSecretaParaDesarrolloDeSsiuCon32CaracteresMinimo"));
+            if (string.IsNullOrWhiteSpace(request.Nombre) ||
+                string.IsNullOrWhiteSpace(request.Correo) ||
+                string.IsNullOrWhiteSpace(request.Password))
+            {
+                return BadRequest(new { mensaje = "Nombre, correo y contraseña son obligatorios" });
+            }
+
+            var correo = request.Correo.Trim().ToLower();
+
+            var existeUsuario = await _context.Users
+                .AnyAsync(u => u.Correo.ToLower() == correo);
+
+            if (existeUsuario)
+            {
+                return BadRequest(new { mensaje = "Ya existe un usuario con ese correo" });
+            }
+
+            var nuevoGuardia = new User
+            {
+                Nombre = request.Nombre.Trim(),
+                Correo = correo,
+                Rol = "Guardia",
+                Facultad = string.IsNullOrWhiteSpace(request.Facultad)
+                    ? "General"
+                    : request.Facultad.Trim(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+            };
+
+            _context.Users.Add(nuevoGuardia);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                mensaje = "Guardia registrado correctamente",
+                usuario = new
+                {
+                    nuevoGuardia.Id,
+                    nuevoGuardia.Nombre,
+                    nuevoGuardia.Correo,
+                    nuevoGuardia.Rol,
+                    nuevoGuardia.Facultad
+                }
+            });
+        }
+
+        private string GenerateJwt(User user)
+        {
+            var securityKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    _config["Jwt:Key"] 
+                    ?? "ClaveSuperSecretaParaDesarrolloDeSsiuCon32CaracteresMinimo"
+                )
+            );
+
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
@@ -58,9 +124,11 @@ namespace Ssiu.Api.Controllers
                 audience: _config["Jwt:Audience"],
                 claims: claims,
                 expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: credentials);
+                signingCredentials: credentials
+            );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }
+
