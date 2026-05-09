@@ -61,7 +61,7 @@ export default function PanicButton({ onConfirm }: Props) {
   ).current;
 
   return (
-    <View style={styles.wrapper} testID="panic-button" {...panResponder.panHandlers}>
+    <View style={styles.wrapper} {...panResponder.panHandlers}>
       <Svg
         width={SIZE}
         height={SIZE}
