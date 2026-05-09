@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { guardService } from '../services/guardService';
 
 import {
   FlatList,
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   View,
   SafeAreaView,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
 
@@ -23,7 +23,6 @@ import {
 import * as signalR from '@microsoft/signalr';
 import { LeafletMap } from '../components/LeafletMap';
 
-const { width } = Dimensions.get('window');
 
 interface Alert {
   id: string;
@@ -134,25 +133,11 @@ export default function DashboardScreen({ navigation }: any) {
 
     setChangingStatus(true);
 
-    // Cambio optimista
+    // Optimistic update
     updateGuardStatus(nuevoEstado);
 
     try {
-      const response = await fetch(`${API_URL}/Guards/${guard.guardId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          estado: nuevoEstado,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.mensaje || 'No se pudo actualizar el estado');
-      }
+      const data = await guardService.toggleStatus(guard.guardId, nuevoEstado);
 
       updateGuardStatus(data.estado || nuevoEstado);
     } catch (error: any) {
