@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { guardService } from '../services/guardService';
+import { SignalRAlert, useSignalR } from '../hooks/useSignalR';
 
 import {
   FlatList,
@@ -20,7 +21,6 @@ import {
   ShieldCheck,
 } from 'lucide-react-native';
 
-import * as signalR from '@microsoft/signalr';
 import { LeafletMap } from '../components/LeafletMap';
 
 
@@ -48,9 +48,6 @@ const API_URL = IS_WEB
   ? 'http://localhost:5233/api'
   : 'http://10.0.2.2:5233/api';
 
-const HUB_URL = IS_WEB
-  ? 'http://localhost:5233/alerthub'
-  : 'http://10.0.2.2:5233/alerthub';
 
 export default function DashboardScreen({ navigation }: any) {
   const { guard, logout, updateGuardStatus } = useAuth();
@@ -62,40 +59,28 @@ export default function DashboardScreen({ navigation }: any) {
   const estadoActual = guard?.estado || 'Descansando';
   const estaDisponible = estadoActual === 'En Servicio';
 
+  const handleAlertCreated = useCallback((bAlert: SignalRAlert) => {
+    const mapped: Alert = {
+      id: bAlert.id.toString(),
+      user: bAlert.usuario?.nombre || 'Desconocido',
+      location: bAlert.zona?.nombre || 'Ubicación desconocida',
+      time: 'Ahora',
+      type: 'Pánico',
+      severity: 'High',
+      coords: { x: 50, y: 50 },
+    };
+
+    setAlerts((prev) => [mapped, ...prev]);
+  }, []);
+
+  const { isConnected } = useSignalR({
+    zonaId: guard?.zonaId,
+    onAlertCreated: handleAlertCreated,
+  });
+
+
   useEffect(() => {
     fetchAlerts();
-
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(HUB_URL)
-      .withAutomaticReconnect()
-      .build();
-
-    connection
-      .start()
-      .then(() => {
-        console.log('Connected to SignalR from Guard App');
-
-        connection.invoke('JoinAdminGroup').catch((err) => console.error(err));
-
-        connection.on('ReceiveAlert', (bAlert: any) => {
-          const mapped: Alert = {
-            id: bAlert.id.toString(),
-            user: bAlert.usuario?.nombre || 'Desconocido',
-            location: bAlert.zona?.nombre || 'Ubicación desconocida',
-            time: 'Ahora',
-            type: 'Pánico',
-            severity: 'High',
-            coords: { x: 50, y: 50 },
-          };
-
-          setAlerts((prev) => [mapped, ...prev]);
-        });
-      })
-      .catch((err) => console.error('SignalR Connection Error: ', err));
-
-    return () => {
-      connection.stop();
-    };
   }, []);
 
   const fetchAlerts = async () => {
@@ -203,7 +188,8 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.mapBadge}>
           <Navigation size={14} color="#fff" />
           <Text style={styles.mapBadgeText}>
-            GPS Activo · {guard?.zonaNombre || 'Sin zona'}
+            {isConnected ? 'SignalR Activo' : 'SignalR Desconectado'} ·{' '}
+            {guard?.zonaNombre || 'Sin zona'}
           </Text>
         </View>
       </View>
