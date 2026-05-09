@@ -59,19 +59,34 @@ export default function DashboardScreen({ navigation }: any) {
   const estadoActual = guard?.estado || 'Descansando';
   const estaDisponible = estadoActual === 'En Servicio';
 
-  const handleAlertCreated = useCallback((bAlert: SignalRAlert) => {
-    const mapped: Alert = {
-      id: bAlert.id.toString(),
-      user: bAlert.usuario?.nombre || 'Desconocido',
-      location: bAlert.zona?.nombre || 'Ubicación desconocida',
-      time: 'Ahora',
-      type: 'Pánico',
-      severity: 'High',
-      coords: { x: 50, y: 50 },
-    };
+  const handleAlertCreated = useCallback(
+    (bAlert: SignalRAlert) => {
+      const mapped: Alert = {
+        id: bAlert.id.toString(),
+        user: bAlert.usuario?.nombre || 'Desconocido',
+        location: bAlert.zona?.nombre || 'Ubicación desconocida',
+        time: 'Ahora',
+        type: 'Pánico',
+        severity: 'High',
+        coords: { x: 50, y: 50 },
+      };
 
-    setAlerts((prev) => [mapped, ...prev]);
-  }, []);
+      setAlerts((prev) => {
+        const alreadyExists = prev.some((alert) => alert.id === mapped.id);
+
+        if (alreadyExists) {
+          return prev;
+        }
+
+        return [mapped, ...prev];
+      });
+
+      navigation.navigate('AlertDetail', {
+        alertId: mapped.id,
+      });
+     },
+    [navigation]
+  );
 
   const { isConnected } = useSignalR({
     zonaId: guard?.zonaId,
