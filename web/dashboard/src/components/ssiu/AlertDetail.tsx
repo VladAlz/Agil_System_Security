@@ -28,15 +28,19 @@ interface Props {
 }
 
 // Mapeo simple de coordenadas relativas a Lat/Lng para la UTA centradas en los bloques principales
+// Mapeo ultra-preciso para que el 0-100% caiga exactamente dentro de los polígonos de la UTA
 const getLatLng = (x: number, y: number): [number, number] => {
-  const lat = -1.267584 - ((y - 50) / 100) * 0.0050;
-  const lng = -78.624025 + ((x - 50) / 100) * 0.0050;
+  // Ajuste: West -78.6253 (donde empieza FISEI), East -78.6220
+  // Norte -1.2664, Sur -1.2705
+  const lat = -1.2664 - (y / 100) * 0.0041;
+  const lng = -78.6253 + (x / 100) * 0.0033;
   return [lat, lng];
 };
 
 export const AlertDetail = ({ alert }: Props) => {
   const [conclusion, setConclusion] = useState("");
   const [isZoomed, setIsZoomed] = useState(false);
+  const [focusedZone, setFocusedZone] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   
   const isActive = alert.status === "active";
@@ -53,7 +57,7 @@ export const AlertDetail = ({ alert }: Props) => {
         )}
         ref={mapRef}
       >
-        <InteractiveMap lat={lat} lng={lng} isActive={isActive} />
+        <InteractiveMap lat={lat} lng={lng} isActive={isActive} focusedZone={focusedZone} />
 
 
 
@@ -75,19 +79,22 @@ export const AlertDetail = ({ alert }: Props) => {
               {isZoomed ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
             </button>
             <div className="flex gap-1.5 p-1.5 rounded-xl bg-card/90 backdrop-blur-md border border-white/10 shadow-xl">
-              {["Z1", "Z2", "Z3", "Z4"].map((z, i) => (
-                <span
+              {["Z1", "Z2", "Z3", "Z4"].map((z, i) => {
+                const zoneId = (i + 1).toString();
+                return (
+                <button
                   key={z}
+                  onClick={() => setFocusedZone(focusedZone === zoneId ? null : zoneId)}
                   className={cn(
                     "w-8 h-8 flex items-center justify-center text-[10px] font-black rounded-lg transition-all",
-                    alert.zone.includes(`Zona ${i + 1}`)
+                    focusedZone === zoneId || (!focusedZone && alert.zone.includes(`Zona ${zoneId}`))
                       ? "bg-primary text-white shadow-lg shadow-primary/30"
-                      : "text-muted-foreground/40"
+                      : "text-muted-foreground/40 hover:bg-white/5 hover:text-white"
                   )}
                 >
                   {z}
-                </span>
-              ))}
+                </button>
+              )})}
             </div>
           </div>
         </div>

@@ -9,25 +9,38 @@ interface Props {
 }
 
 export const Simulator = ({ onTriggerAlert }: Props) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const triggerRandom = () => {
     const id = `sim-${Math.floor(Math.random() * 10000)}`;
+    
+    // Puntos centrales seguros de cada zona (0-100%)
+    const mockZones = [
+      { id: 1, name: "Zona 1", x: 25, y: 15 },
+      { id: 2, name: "Zona 2", x: 50, y: 30 },
+      { id: 3, name: "Zona 3", x: 80, y: 15 },
+      { id: 4, name: "Zona 4", x: 50, y: 80 }
+    ];
+    const picked = mockZones[Math.floor(Math.random() * mockZones.length)];
+    const vary = (val: number) => Math.min(100, Math.max(0, val + (Math.random() * 6 - 3)));
+
     const newAlert: Alert = {
       id,
       code: `ALT-${Math.floor(Math.random() * 9000) + 1000}`,
       user: {
         name: "Usuario Simulado",
         role: "Estudiante",
-        faculty: "FISEI · Simulador",
+        faculty: "Simulador",
         phone: "+593 99 000 0000",
         avatar: "US",
       },
       type: "panic",
       status: "active",
-      zone: "Zona 2 — Huachi",
+      zone: picked.name,
       location: "Área de Simulación",
       coords: { 
-        x: Math.floor(Math.random() * 80) + 10, 
-        y: Math.floor(Math.random() * 80) + 10 
+        x: vary(picked.x), 
+        y: vary(picked.y) 
       },
       createdAt: "ahora mismo",
       description: "ALERTA DE PRUEBA: Activada desde el simulador interno para validar el flujo de SignalR y respuesta.",
@@ -37,10 +50,11 @@ export const Simulator = ({ onTriggerAlert }: Props) => {
       ],
     };
     onTriggerAlert(newAlert);
+    setIsOpen(false);
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full justify-start gap-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10">
           <Play className="w-3.5 h-3.5 text-primary" />

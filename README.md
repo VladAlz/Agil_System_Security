@@ -66,23 +66,6 @@ npx expo start --web
 
 ---
 
-## 📋 Pendientes para el Cierre Total (Último 5%)
-
-Como **Tech Lead**, he identificado las últimas tareas para llegar al 100% de la planificación oficial del Sprint 1:
-
-### 🔴 [TAREA T04-02] — Algoritmo de Detección de Zona
-*   **Responsable:** **Willian**
-*   **Descripción:** Actualmente, las alertas se asignan a la "Zona 1" por defecto. Falta implementar el algoritmo matemático en el `AlertsController.cs` para que, según las coordenadas GPS enviadas por el estudiante, el sistema identifique automáticamente si pertenece a la Zona 1, 2, 3 o 4.
-
-### 🔴 [TAREA T02-09/10] — Pruebas de Calidad (QA)
-*   **Responsable:** **Vladimir**
-*   **Descripción:** Se requiere crear el archivo formal de pruebas unitarias para el módulo de alertas. Se debe verificar que:
-    1. La alerta se cree correctamente en la BD.
-    2. La notificación llegue al SignalR Hub.
-    3. El sistema rechace coordenadas fuera del campus.
-
----
-
 ## 👥 Equipo de Desarrollo
 *   **Alen:** Tech Lead / Backend & Arquitectura.
 *   **Gaby:** Frontend Web / Dashboard.

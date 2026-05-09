@@ -4339,19 +4339,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Acer Predator\\.nuget\\packages\\": {}
+    "C:\\Users\\Usuario\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Acer Predator\\Documents\\agiles\\sistema'SEGURIDAD\\Agil_System_Security\\backend\\Ssiu.Api\\Ssiu.Api.csproj",
+      "projectUniqueName": "C:\\Users\\Usuario\\Agil_System_Security\\backend\\Ssiu.Api\\Ssiu.Api.csproj",
       "projectName": "Ssiu.Api",
-      "projectPath": "C:\\Users\\Acer Predator\\Documents\\agiles\\sistema'SEGURIDAD\\Agil_System_Security\\backend\\Ssiu.Api\\Ssiu.Api.csproj",
-      "packagesPath": "C:\\Users\\Acer Predator\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Acer Predator\\Documents\\agiles\\sistema'SEGURIDAD\\Agil_System_Security\\backend\\Ssiu.Api\\obj\\",
+      "projectPath": "C:\\Users\\Usuario\\Agil_System_Security\\backend\\Ssiu.Api\\Ssiu.Api.csproj",
+      "packagesPath": "C:\\Users\\Usuario\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Usuario\\Agil_System_Security\\backend\\Ssiu.Api\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Acer Predator\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\Usuario\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
