@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { guardService } from '../services/guardService';
 import { SignalRAlert, useSignalR } from '../hooks/useSignalR';
+import { API_URL } from '../../config/api';
 
 import {
   FlatList,
@@ -40,14 +41,6 @@ const getLatLng = (x: number, y: number): { lat: number; lng: number } => {
     lng: -78.624025 + ((x - 50) / 100) * 0.005,
   };
 };
-
-const IS_WEB =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-const API_URL = IS_WEB
-  ? 'http://localhost:5233/api'
-  : 'http://10.0.2.2:5233/api';
-
 
 export default function DashboardScreen({ navigation }: any) {
   const { guard, logout, updateGuardStatus } = useAuth();

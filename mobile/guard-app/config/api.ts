@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 
 const API_PORT = '5233';
+
+// Cambia solo esta IP cuando tu PC cambie de red
 const PC_IP = '192.168.101.10';
 
 const getApiHost = () => {

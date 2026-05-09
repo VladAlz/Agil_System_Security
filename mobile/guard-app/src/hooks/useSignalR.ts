@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
-const IS_WEB =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost';
+import { HUB_URL } from '../../config/api';
 
-const HUB_URL = IS_WEB
-  ? 'http://localhost:5233/alerthub'
-  : 'http://10.0.2.2:5233/alerthub';
 
 export type SignalRAlert = {
   id: number | string;

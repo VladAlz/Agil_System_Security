@@ -1,9 +1,4 @@
-const IS_WEB =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-const API_URL = IS_WEB
-  ? 'http://localhost:5233/api'
-  : 'http://10.0.2.2:5233/api';
+import { API_URL } from '../../config/api';
 
 export type GuardStatusResponse = {
   id: number;
