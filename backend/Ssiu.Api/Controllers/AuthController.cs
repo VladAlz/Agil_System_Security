@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Ssiu.Api.Data;
+using Ssiu.Api.Services;
 using Ssiu.Api.Dtos;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -13,54 +14,42 @@ namespace Ssiu.Api.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IConfiguration _config;
+        private readonly IAuthService _authService;
 
-        public AuthController(AppDbContext context, IConfiguration config)
+        public AuthController(IAuthService authService)
         {
-            _context = context;
-            _config = config;
+            _authService = authService;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Correo == request.Correo);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            var response = await _authService.LoginAsync(request);
+            if (response == null)
             {
                 return Unauthorized(new { mensaje = "Correo o contraseña incorrectos" });
             }
-
-            var token = GenerateJwt(user);
             
-            return Ok(new LoginResponse
-            {
-                Token = token,
-                Usuario = new { user.Id, user.Nombre, user.Correo, user.Rol, user.Facultad }
-            });
+            return Ok(response);
         }
 
-        private string GenerateJwt(Models.User user)
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"] ?? "ClaveSuperSecretaParaDesarrolloDeSsiuCon32CaracteresMinimo"));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+            var response = await _authService.RegisterAsync(request);
+            if (response == null)
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Nombre),
-                new Claim(ClaimTypes.Role, user.Rol),
-                new Claim(ClaimTypes.Email, user.Correo)
-            };
+                return BadRequest(new { mensaje = "El correo ya está registrado" });
+            }
+            
+            return Ok(response);
+        }
 
-            var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: credentials);
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+        [HttpPost("refresh")]
+        public IActionResult Refresh([FromBody] TokenRequest request)
+        {
+            // Simulación de refresh token para Sprint 1
+            return Ok(new { token = "new-simulated-token", refreshToken = "new-simulated-refresh" });
         }
     }
 }

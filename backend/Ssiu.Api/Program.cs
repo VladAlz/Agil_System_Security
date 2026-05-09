@@ -50,6 +50,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Inyección de Dependencias
+builder.Services.AddScoped<Ssiu.Api.Repositories.IUserRepository, Ssiu.Api.Repositories.UserRepository>();
+builder.Services.AddScoped<Ssiu.Api.Services.IAuthService, Ssiu.Api.Services.AuthService>();
+builder.Services.AddScoped<Ssiu.Api.Repositories.IZoneRepository, Ssiu.Api.Repositories.ZoneRepository>();
+builder.Services.AddScoped<Ssiu.Api.Services.IZoneService, Ssiu.Api.Services.ZoneService>();
+builder.Services.AddScoped<Ssiu.Api.Repositories.IAlertRepository, Ssiu.Api.Repositories.AlertRepository>();
+builder.Services.AddScoped<Ssiu.Api.Services.IAlertService, Ssiu.Api.Services.AlertService>();
+builder.Services.AddScoped<Ssiu.Api.Repositories.IGuardRepository, Ssiu.Api.Repositories.GuardRepository>();
+builder.Services.AddScoped<Ssiu.Api.Services.IGuardService, Ssiu.Api.Services.GuardService>();
+
 // CORS para permitir a los frontend conectarse
 builder.Services.AddCors(options =>
 {

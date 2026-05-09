@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ssiu.Api.Data;
+using Ssiu.Api.Services;
 
 namespace Ssiu.Api.Controllers
 {
@@ -8,26 +9,28 @@ namespace Ssiu.Api.Controllers
     [Route("api/[controller]")]
     public class ZonesController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IZoneService _zoneService;
 
-        public ZonesController(AppDbContext context)
+        public ZonesController(IZoneService zoneService)
         {
-            _context = context;
+            _zoneService = zoneService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetZones()
         {
-            var zones = await _context.Zones.ToListAsync();
+            var zones = await _zoneService.GetZonesAsync();
             return Ok(zones);
         }
 
         [HttpGet("asignar")]
         public async Task<IActionResult> AsignarZona(double lat, double lng)
         {
-            // Implementación simplificada
-            // Lo ideal es un algoritmo Ray Casting o GeoCoordinate
-            var zone = await _context.Zones.FirstOrDefaultAsync(); // Demo: devuelve la primera zona
+            var zone = await _zoneService.AssignZoneAsync(lat, lng);
+            if (zone == null)
+            {
+                return NotFound(new { mensaje = "Ubicación fuera de las zonas monitoreadas" });
+            }
             return Ok(zone);
         }
     }

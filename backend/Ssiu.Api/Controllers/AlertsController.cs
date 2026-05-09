@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Ssiu.Api.Data;
 using Ssiu.Api.Hubs;
 using Ssiu.Api.Models;
+using Ssiu.Api.Services;
 
 namespace Ssiu.Api.Controllers
 {
@@ -18,55 +19,24 @@ namespace Ssiu.Api.Controllers
     [Route("api/[controller]")]
     public class AlertsController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IHubContext<AlertHub> _hubContext;
+        private readonly IAlertService _alertService;
 
-        public AlertsController(AppDbContext context, IHubContext<AlertHub> hubContext)
+        public AlertsController(IAlertService alertService)
         {
-            _context = context;
-            _hubContext = hubContext;
+            _alertService = alertService;
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateAlert([FromBody] CreateAlertDto dto)
         {
-            // En un sistema real se usa punto-en-polígono, aquí asignamos estáticamente por demo
-            // o lo simulamos. Buscamos la zona aproximada o por defecto Zona 1
-            var zonaAsignada = 1; 
-
-            var alert = new Alert
-            {
-                UsuarioId = dto.UsuarioId,
-                ZonaId = zonaAsignada,
-                Lat = dto.Lat,
-                Lng = dto.Lng,
-                Estado = "Activa",
-                FechaHora = DateTime.UtcNow
-            };
-
-            _context.Alerts.Add(alert);
-            await _context.SaveChangesAsync();
-
-            var alertWithDetails = await _context.Alerts
-                .Include(a => a.Usuario)
-                .Include(a => a.Zona)
-                .FirstOrDefaultAsync(a => a.Id == alert.Id);
-
-            // Notificar vía SignalR a los guardias de esa zona y a admins
-            await _hubContext.Clients.Group($"zona-{zonaAsignada}").SendAsync("ReceiveAlert", alertWithDetails);
-            await _hubContext.Clients.Group("admins").SendAsync("ReceiveAlert", alertWithDetails);
-
-            return Ok(alertWithDetails);
+            var alert = await _alertService.CreateAlertAsync(dto.UsuarioId, dto.Lat, dto.Lng);
+            return Ok(alert);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAlerts()
         {
-            var alerts = await _context.Alerts
-                .Include(a => a.Usuario)
-                .Include(a => a.Zona)
-                .OrderByDescending(a => a.FechaHora)
-                .ToListAsync();
+            var alerts = await _alertService.GetAlertsAsync();
             return Ok(alerts);
         }
     }
