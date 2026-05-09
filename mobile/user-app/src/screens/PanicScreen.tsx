@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import PanicButton from '../components/PanicButton';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../../App';
@@ -8,19 +9,38 @@ import type { RootStackParamList } from '../../App';
 type Props = NativeStackScreenProps<RootStackParamList, 'Panic'>;
 
 export default function PanicScreen({ navigation }: Props) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    const doLogout = async () => {
+      await logout();
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+        await doLogout();
+      }
+    } else {
+      Alert.alert(
+        "Cerrar Sesión",
+        "¿Estás seguro de que deseas salir?",
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Salir", style: "destructive", onPress: doLogout }
+        ]
+      );
+    }
+  };
 
   const handleConfirm = async () => {
     try {
       const alertData = {
         usuarioId: parseInt(user?.id ?? "0"),
-        lat: -1.2665, // En un caso real aquí iría el GPS del celular
+        lat: -1.2665,
         lng: -78.6245
       };
 
-      const BASE_URL = (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
-        ? 'http://localhost:5233/api' 
-        : 'http://10.0.2.2:5233/api';
+      const BASE_URL = 'http://192.168.1.61:5233/api';
 
       await fetch(`${BASE_URL}/Alerts`, {
         method: "POST",
@@ -39,9 +59,14 @@ export default function PanicScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Hola, {user?.name ?? 'Usuario'}</Text>
-        <Text style={styles.faculty}>{user?.faculty ?? 'Universidad Técnica de Ambato'}</Text>
+      <View style={styles.headerContainer}>
+        <View style={styles.header}>
+          <Text style={styles.greeting}>Hola, {user?.name ?? 'Usuario'}</Text>
+          <Text style={styles.faculty}>{user?.faculty ?? 'Universidad Técnica de Ambato'}</Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={28} color="#ef4444" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.center}>
@@ -65,8 +90,19 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     justifyContent: 'space-between',
   },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
   header: {
     gap: 4,
+    flex: 1,
+  },
+  logoutButton: {
+    padding: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
   },
   greeting: {
     color: '#f1f5f9',

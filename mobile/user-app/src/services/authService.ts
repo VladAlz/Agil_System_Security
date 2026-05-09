@@ -2,9 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import type { LoginRequest, LoginResponse, User } from '../types';
 
-const AUTH_API = (typeof window !== 'undefined' && window.location.hostname === 'localhost') 
-  ? 'http://localhost:5233/api' 
-  : 'http://10.0.2.2:5233/api';
+const AUTH_API = 'http://192.168.1.61:5233/api';
 
 const KEYS = {
   ACCESS_TOKEN: 'ssiu_access_token',

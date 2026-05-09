@@ -3,7 +3,7 @@ import * as signalR from "@microsoft/signalr";
 import { Alert, alerts as initialAlerts } from "@/data/alerts";
 import { toast } from "sonner";
 
-const HUB_URL = "http://localhost:5233/alerthub";
+const HUB_URL = "http://192.168.1.61:5233/alerthub";
 
 export const useAlertHub = () => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
@@ -22,7 +22,7 @@ export const useAlertHub = () => {
 
   useEffect(() => {
     // 1. Fetch initial alerts from backend
-    fetch("http://localhost:5233/api/Alerts")
+    fetch("http://192.168.1.61:5233/api/Alerts")
       .then(res => res.json())
       .then(data => {
         const mappedAlerts = data.map(mapBackendAlertToFrontend);
