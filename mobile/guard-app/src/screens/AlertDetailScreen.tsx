@@ -1,108 +1,271 @@
-import React from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  View, 
-  SafeAreaView, 
-  ScrollView
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Shield, MapPin, Clock, Phone, MessageSquare, ChevronLeft, CheckCircle } from 'lucide-react-native';
+
+import {
+  AlertTriangle,
+  CheckCircle,
+  ChevronLeft,
+  Clock,
+  MapPin,
+  Navigation,
+  Shield,
+  UserRound,
+} from 'lucide-react-native';
+
 import { LeafletMap } from '../components/LeafletMap';
+import { alertService, AlertDetail } from '../services/alertService';
+
+function formatDate(fecha?: string) {
+  if (!fecha) return 'Fecha no disponible';
+
+  const date = new Date(fecha);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Fecha no disponible';
+  }
+
+  return date.toLocaleString('es-EC', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function AlertDetailScreen({ route, navigation }: any) {
   const { alertId } = route.params;
-  
-  // Mapeo simple de coordenadas relativas a Lat/Lng para la UTA centradas en los bloques principales
-  const getLatLng = (x: number, y: number): { lat: number, lng: number } => {
-    return {
-      lat: -1.267584 - ((y - 50) / 100) * 0.0050,
-      lng: -78.624025 + ((x - 50) / 100) * 0.0050
-    };
+
+  const [alert, setAlert] = useState<AlertDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadAlert = async () => {
+    try {
+      setError(null);
+      const data = await alertService.getById(alertId);
+      setAlert(data);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar la alerta');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const alert = {
-    id: alertId,
-    user: 'Camila Reinoso',
-    location: 'Parqueadero Norte · FISEI',
-    time: '2 min',
-    role: 'Estudiante',
-    faculty: 'Ingeniería en Sistemas',
-    description: 'El usuario reporta una situación de emergencia por posible asalto en las cercanías del bloque de laboratorios.',
-    coords: { x: 35, y: 42 }
+  useEffect(() => {
+    loadAlert();
+  }, [alertId]);
+
+  const handleAssumeCase = async () => {
+    if (!alert) return;
+
+    setUpdatingStatus(true);
+
+    try {
+      const updatedAlert = await alertService.updateStatus(alert.id, 'En Camino');
+      setAlert(updatedAlert);
+    } catch (err: any) {
+      alertMessage(err.message || 'No se pudo asumir el caso');
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
-  const { lat, lng } = getLatLng(alert.coords.x, alert.coords.y);
+  const alertMessage = (message: string) => {
+    if (typeof window !== 'undefined') {
+      window.alert(message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator color="#ef4444" size="large" />
+          <Text style={styles.loadingText}>Cargando detalle...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !alert) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <ChevronLeft color="#fff" size={24} />
+          </TouchableOpacity>
+
+          <Text style={styles.headerTitle}>Detalle de Alerta</Text>
+
+          <View style={{ width: 40 }} />
+        </View>
+
+        <View style={styles.centerContainer}>
+          <AlertTriangle color="#ef4444" size={42} />
+          <Text style={styles.errorTitle}>No se pudo cargar la alerta</Text>
+          <Text style={styles.errorText}>{error}</Text>
+
+          <TouchableOpacity style={styles.retryButton} onPress={loadAlert}>
+            <Text style={styles.retryButtonText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const lat = alert.lat || -1.267584;
+  const lng = alert.lng || -78.624025;
+
+  const userName = alert.usuario?.nombre || 'Usuario desconocido';
+  const faculty = alert.usuario?.facultad || 'Facultad no registrada';
+  const zoneName = alert.zona?.nombre || 'Zona no asignada';
+  const currentStatus = alert.estado || 'Activa';
+  const isOnTheWay = currentStatus === 'En Camino';
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <ChevronLeft color="#fff" size={24} />
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>Detalle de Alerta</Text>
+
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.scroll}>
-        {/* Mapa Detallado con Leaflet */}
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.mapContainer}>
-          <LeafletMap 
-            centerLat={lat} 
-            centerLng={lng} 
-            markers={[{ id: alert.id, lat, lng, title: alert.user, severity: 'High' }]} 
+          <LeafletMap
+            centerLat={lat}
+            centerLng={lng}
+            markers={[
+              {
+                id: alert.id.toString(),
+                lat,
+                lng,
+                title: userName,
+                severity: 'High',
+              },
+            ]}
           />
+
           <View style={styles.locationOverlay}>
             <MapPin size={16} color="#ef4444" />
-            <Text style={styles.locationText}>{alert.location}</Text>
+            <Text style={styles.locationText}>{zoneName}</Text>
           </View>
         </View>
 
         <View style={styles.content}>
+          <View style={styles.statusRow}>
+            <View style={styles.statusBadge}>
+              <AlertTriangle size={15} color="#ef4444" />
+              <Text style={styles.statusText}>{currentStatus}</Text>
+            </View>
+
+            <Text style={styles.alertCode}>#{alert.id}</Text>
+          </View>
+
           <View style={styles.userRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{alert.user[0]}</Text>
+              <Text style={styles.avatarText}>
+                {userName.charAt(0).toUpperCase()}
+              </Text>
             </View>
-            <View>
-              <Text style={styles.userName}>{alert.user}</Text>
-              <Text style={styles.userRole}>{alert.role} · {alert.faculty}</Text>
+
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{userName}</Text>
+              <Text style={styles.userRole}>Estudiante · {faculty}</Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>Descripción</Text>
-          <Text style={styles.description}>{alert.description}</Text>
+          <Text style={styles.sectionTitle}>Información de la alerta</Text>
 
-          <View style={styles.infoGrid}>
-            <View style={styles.infoBox}>
-              <Clock size={16} color="#94a3b8" />
-              <Text style={styles.infoValue}>{alert.time}</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <MapPin size={18} color="#94a3b8" />
+              <View>
+                <Text style={styles.infoLabel}>Zona</Text>
+                <Text style={styles.infoValue}>{zoneName}</Text>
+              </View>
             </View>
-            <View style={styles.infoBox}>
-              <Shield size={16} color="#94a3b8" />
-              <Text style={styles.infoValue}>{alert.id}</Text>
+
+            <View style={styles.infoRow}>
+              <Clock size={18} color="#94a3b8" />
+              <View>
+                <Text style={styles.infoLabel}>Fecha y hora</Text>
+                <Text style={styles.infoValue}>{formatDate(alert.fechaHora)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Navigation size={18} color="#94a3b8" />
+              <View>
+                <Text style={styles.infoLabel}>Coordenadas</Text>
+                <Text style={styles.infoValue}>
+                  {lat.toFixed(6)}, {lng.toFixed(6)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.infoRow}>
+              <UserRound size={18} color="#94a3b8" />
+              <View>
+                <Text style={styles.infoLabel}>Correo del usuario</Text>
+                <Text style={styles.infoValue}>
+                  {alert.usuario?.correo || 'No disponible'}
+                </Text>
+              </View>
             </View>
           </View>
 
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.primaryAction}>
-              <Shield size={20} color="#fff" />
-              <Text style={styles.primaryActionText}>Asumir Alerta</Text>
+            <TouchableOpacity
+              style={[
+                styles.primaryAction,
+                isOnTheWay && styles.primaryActionDisabled,
+              ]}
+              onPress={handleAssumeCase}
+              disabled={updatingStatus || isOnTheWay}
+            >
+              {updatingStatus ? (
+                <ActivityIndicator color="#fff" />
+              ) : isOnTheWay ? (
+                <>
+                  <CheckCircle size={20} color="#fff" />
+                  <Text style={styles.primaryActionText}>Caso en camino</Text>
+                </>
+              ) : (
+                <>
+                  <Shield size={20} color="#fff" />
+                  <Text style={styles.primaryActionText}>Asumir Caso</Text>
+                </>
+              )}
             </TouchableOpacity>
-            
-            <View style={styles.secondaryActions}>
-              <TouchableOpacity style={styles.secondaryAction}>
-                <Phone size={20} color="#f1f5f9" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryAction}>
-                <MessageSquare size={20} color="#f1f5f9" />
-              </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity style={styles.closeAction}>
-              <CheckCircle size={20} color="#22c55e" />
-              <Text style={styles.closeActionText}>Finalizar Caso</Text>
+            <TouchableOpacity
+              style={styles.secondaryAction}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.secondaryActionText}>Volver al panel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -120,7 +283,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#1e293b',
   },
@@ -135,7 +299,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#fff',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   scroll: {
     flex: 1,
@@ -150,7 +314,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
     padding: 12,
     borderRadius: 12,
     flexDirection: 'row',
@@ -163,19 +327,45 @@ const styles = StyleSheet.create({
   locationText: {
     color: '#f1f5f9',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   content: {
     padding: 24,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  statusBadge: {
+    backgroundColor: '#ef444415',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statusText: {
+    color: '#ef4444',
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  alertCode: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '800',
   },
   userRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    marginTop: 20,
   },
   avatar: {
-    width: 56,
-    height: 56,
+    width: 58,
+    height: 58,
     borderRadius: 18,
     backgroundColor: '#f59e0b',
     justifyContent: 'center',
@@ -184,108 +374,126 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#fff',
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+  userInfo: {
+    flex: 1,
   },
   userName: {
     color: '#f1f5f9',
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
   },
   userRole: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 13,
-    marginTop: 2,
+    marginTop: 3,
   },
   divider: {
     height: 1,
     backgroundColor: '#1e293b',
-    marginVertical: 20,
+    marginVertical: 22,
   },
   sectionTitle: {
     color: '#94a3b8',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  description: {
-    color: '#cbd5e1',
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 20,
-  },
-  infoBox: {
-    flex: 1,
+  infoCard: {
     backgroundColor: '#1e293b',
-    padding: 12,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
     borderWidth: 1,
     borderColor: '#334155',
+    borderRadius: 18,
+    padding: 16,
+    gap: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  infoLabel: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginBottom: 3,
   },
   infoValue: {
-    color: '#f1f5f9',
-    fontSize: 13,
-    fontWeight: '600',
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '700',
   },
   actions: {
-    marginTop: 32,
+    marginTop: 28,
     gap: 12,
   },
   primaryAction: {
     backgroundColor: '#ef4444',
-    height: 56,
+    minHeight: 56,
     borderRadius: 16,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
-    shadowColor: '#ef4444',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
+  },
+  primaryActionDisabled: {
+    backgroundColor: '#16a34a',
   },
   primaryActionText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    gap: 12,
+    fontWeight: '900',
   },
   secondaryAction: {
-    flex: 1,
-    backgroundColor: '#1e293b',
-    height: 56,
+    minHeight: 52,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: '#1e293b',
     borderWidth: 1,
     borderColor: '#334155',
-  },
-  closeAction: {
-    marginTop: 8,
-    height: 56,
-    borderRadius: 16,
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#22c55e30',
-    backgroundColor: '#22c55e05',
   },
-  closeActionText: {
-    color: '#22c55e',
-    fontSize: 16,
-    fontWeight: '700',
+  secondaryActionText: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    color: '#94a3b8',
+    marginTop: 12,
+    fontSize: 14,
+  },
+  errorTitle: {
+    color: '#f8fafc',
+    fontSize: 20,
+    fontWeight: '900',
+    marginTop: 14,
+  },
+  errorText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  retryButton: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 18,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '900',
   },
 });

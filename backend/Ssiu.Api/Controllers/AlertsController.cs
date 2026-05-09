@@ -14,6 +14,11 @@ namespace Ssiu.Api.Controllers
         public double Lng { get; set; }
     }
 
+    public class UpdateAlertStatusDto
+    {
+        public string Estado { get; set; } = string.Empty;
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     public class AlertsController : ControllerBase
@@ -30,9 +35,7 @@ namespace Ssiu.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateAlert([FromBody] CreateAlertDto dto)
         {
-            // En un sistema real se usa punto-en-polígono, aquí asignamos estáticamente por demo
-            // o lo simulamos. Buscamos la zona aproximada o por defecto Zona 1
-            var zonaAsignada = 1; 
+            var zonaAsignada = 1;
 
             var alert = new Alert
             {
@@ -52,9 +55,11 @@ namespace Ssiu.Api.Controllers
                 .Include(a => a.Zona)
                 .FirstOrDefaultAsync(a => a.Id == alert.Id);
 
-            // Notificar vía SignalR a los guardias de esa zona y a admins
-            await _hubContext.Clients.Group($"zona-{zonaAsignada}").SendAsync("ReceiveAlert", alertWithDetails);
-            await _hubContext.Clients.Group("admins").SendAsync("ReceiveAlert", alertWithDetails);
+            await _hubContext.Clients.Group($"zona_{zonaAsignada}")
+                .SendAsync("ReceiveAlert", alertWithDetails);
+
+            await _hubContext.Clients.Group("admins")
+                .SendAsync("ReceiveAlert", alertWithDetails);
 
             return Ok(alertWithDetails);
         }
@@ -67,7 +72,59 @@ namespace Ssiu.Api.Controllers
                 .Include(a => a.Zona)
                 .OrderByDescending(a => a.FechaHora)
                 .ToListAsync();
+
             return Ok(alerts);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetAlertById(int id)
+        {
+            var alert = await _context.Alerts
+                .Include(a => a.Usuario)
+                .Include(a => a.Zona)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (alert == null)
+            {
+                return NotFound(new { mensaje = "Alerta no encontrada" });
+            }
+
+            return Ok(alert);
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateAlertStatus(int id, [FromBody] UpdateAlertStatusDto dto)
+        {
+            var alert = await _context.Alerts
+                .Include(a => a.Usuario)
+                .Include(a => a.Zona)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (alert == null)
+            {
+                return NotFound(new { mensaje = "Alerta no encontrada" });
+            }
+
+            var estadosPermitidos = new[] 
+            { 
+                "Activa", 
+                "En Camino", 
+                "Atendida", 
+                "Cancelada" 
+            };
+
+            if (!estadosPermitidos.Contains(dto.Estado))
+            {
+                return BadRequest(new
+                {
+                    mensaje = "Estado no válido. Use: Activa, En Camino, Atendida o Cancelada"
+                });
+            }
+
+            alert.Estado = dto.Estado;
+            await _context.SaveChangesAsync();
+
+            return Ok(alert);
         }
     }
 }
