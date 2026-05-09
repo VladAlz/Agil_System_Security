@@ -88,11 +88,18 @@ export default function DashboardScreen({ navigation }: any) {
     [navigation]
   );
 
-  const { isConnected } = useSignalR({
+  const { isConnected, connectionStatus } = useSignalR({
     zonaId: guard?.zonaId,
     onAlertCreated: handleAlertCreated,
   });
 
+  const showOfflineBanner =
+    connectionStatus === 'reconnecting' || connectionStatus === 'disconnected';
+
+  const offlineMessage =
+    connectionStatus === 'reconnecting'
+     ? 'Sin conexión — reconectando...'
+     : 'Sin conexión con el servidor';
 
   useEffect(() => {
     fetchAlerts();
@@ -193,6 +200,11 @@ export default function DashboardScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {showOfflineBanner ? (
+        <View style={styles.offlineBanner}>
+         <Text style={styles.offlineBannerText}>{offlineMessage}</Text>
+        </View>
+      ) : null}
       <View style={styles.mapContainer}>
         <LeafletMap
           centerLat={-1.267584}
@@ -203,7 +215,7 @@ export default function DashboardScreen({ navigation }: any) {
         <View style={styles.mapBadge}>
           <Navigation size={14} color="#fff" />
           <Text style={styles.mapBadgeText}>
-            {isConnected ? 'SignalR Activo' : 'SignalR Desconectado'} ·{' '}
+            {isConnected ? 'SignalR Activo' : 'Sin conexión'} ·{' '}
             {guard?.zonaNombre || 'Sin zona'}
           </Text>
         </View>
@@ -540,5 +552,19 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 12,
     fontWeight: '800',
+  },
+  offlineBanner: {
+    backgroundColor: '#f59e0b',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 99,
+  },
+  offlineBannerText: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
 });

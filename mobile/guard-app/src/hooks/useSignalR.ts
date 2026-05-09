@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
-
 const IS_WEB =
   typeof window !== 'undefined' && window.location.hostname === 'localhost';
 
@@ -31,9 +30,14 @@ type UseSignalRProps = {
   onAlertCreated: (alert: SignalRAlert) => void;
 };
 
+export type SignalRStatus = 'connected' | 'reconnecting' | 'disconnected';
+
 export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
   const connectionRef = useRef<signalR.HubConnection | null>(null);
+
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] =
+    useState<SignalRStatus>('disconnected');
 
   useEffect(() => {
     const connection = new signalR.HubConnectionBuilder()
@@ -44,31 +48,38 @@ export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
 
     connectionRef.current = connection;
 
+    const joinGroups = async () => {
+      try {
+        await connection.invoke('JoinAdminGroup');
+        console.log('Unido al grupo admin para recibir alertas generales');
+
+        if (zonaId) {
+          await connection.invoke('JoinZoneGroup', zonaId);
+          console.log(`Unido al grupo zona_${zonaId}`);
+        }
+      } catch (error) {
+        console.error('Error al unirse a grupos SignalR:', error);
+      }
+    };
+
     connection.onreconnecting(() => {
       console.log('SignalR reconectando...');
       setIsConnected(false);
+      setConnectionStatus('reconnecting');
     });
 
     connection.onreconnected(async () => {
       console.log('SignalR reconectado');
       setIsConnected(true);
+      setConnectionStatus('connected');
 
-      try {
-        await connection.invoke('JoinAdminGroup');
-        console.log('Reconectado al grupo admin');
-
-        if (zonaId) {
-          await connection.invoke('JoinZoneGroup', zonaId);
-          console.log(`Reconectado al grupo zona_${zonaId}`);
-        }
-      } catch (error) {
-        console.error('Error al volver a unirse a los grupos SignalR:', error);
-      }
+      await joinGroups();
     });
 
     connection.onclose(() => {
       console.log('SignalR desconectado');
       setIsConnected(false);
+      setConnectionStatus('disconnected');
     });
 
     connection.on('ReceiveAlert', (alert: SignalRAlert) => {
@@ -78,21 +89,20 @@ export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
 
     const startConnection = async () => {
       try {
+        setConnectionStatus('reconnecting');
+
         await connection.start();
+
         setIsConnected(true);
+        setConnectionStatus('connected');
 
         console.log('SignalR conectado desde Guardia App');
 
-        await connection.invoke('JoinAdminGroup');
-        console.log('Unido al grupo admin para recibir alertas generales');
-
-        if (zonaId) {
-          await connection.invoke('JoinZoneGroup', zonaId);
-          console.log(`Unido al grupo zona_${zonaId}`);
-        }
+        await joinGroups();
       } catch (error) {
         console.error('Error conectando a SignalR:', error);
         setIsConnected(false);
+        setConnectionStatus('disconnected');
       }
     };
 
@@ -107,6 +117,7 @@ export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
 
   return {
     isConnected,
+    connectionStatus,
     connection: connectionRef.current,
   };
 }
