@@ -244,6 +244,14 @@ export default function DashboardScreen({ navigation }: any) {
               <Text style={styles.logoutText}>Salir</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.mapButton}
+              onPress={() => navigation.navigate('Map')}
+            >
+              <MapPin size={16} color="#f8fafc" />
+              <Text style={styles.mapButtonText}>Mapa</Text>
+            </TouchableOpacity>
+
             <View style={styles.miniStat}>
               <Text style={styles.miniStatNum}>{alerts.length}</Text>
               <Text style={styles.miniStatLabel}>Activas</Text>
@@ -518,5 +526,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     textTransform: 'uppercase',
+  },
+  mapButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mapButtonText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '800',
   },
 });

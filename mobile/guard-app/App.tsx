@@ -7,14 +7,17 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AlertDetailScreen from './src/screens/AlertDetailScreen';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
 import AlertListScreen from './src/screens/AlertListScreen';
+import MapScreen from './src/screens/MapScreen';
+
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 export type GuardStackParamList = {
   Login: undefined;
   Dashboard: undefined;
   AlertList: undefined;
   AlertDetail: { alertId: string };
+  Map: undefined;
 };
 
 const Stack = createNativeStackNavigator<GuardStackParamList>();
@@ -49,6 +52,7 @@ function AppNavigator() {
             <Stack.Screen name="Dashboard" component={DashboardScreen} />
             <Stack.Screen name="AlertList" component={AlertListScreen} />
             <Stack.Screen name="AlertDetail" component={AlertDetailScreen} />
+            <Stack.Screen name="Map" component={MapScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
