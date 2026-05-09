@@ -47,6 +47,7 @@ npx expo start
 ```
 3. Escanea el código QR con la app **Expo Go** (Android) o la Cámara (iOS).
 *   **Login Estudiante:** `estudiante@uta.edu.ec` / `student123`
+*   **Login Estudiante2:** `carlos.perez2@uta.edu.ec` / `perez123password`
 *   **Acción:** Mantén presionado el botón SOS por 3 segundos para activar SignalR.
 
 ### 4. Guard App (Seguridad)

@@ -1,6 +1,45 @@
 @Ssiu.Api_HostAddress = http://localhost:5233
 
-GET {{Ssiu.Api_HostAddress}}/weatherforecast/
+### 1. Login (Usuario Seed)
+POST {{Ssiu.Api_HostAddress}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "correo": "admin@uta.edu.ec",
+  "password": "admin123"
+}
+
+### 2. Registro de Nuevo Estudiante
+POST {{Ssiu.Api_HostAddress}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Carlos Perez",
+  "correo": "carlos.perez@uta.edu.ec",
+  "password": "perez123password",
+  "facultad": "FISEI",
+  "rol": "Estudiante"
+}
+
+### 3. Obtener Zonas (Verifica que el Seed cargó bien)
+GET {{Ssiu.Api_HostAddress}}/api/Zones
 Accept: application/json
 
-###
+### 4. Probar Punto en Polígono (Asignar Zona)
+# Coordenadas dentro de Zona 1 (Sector FISEI)
+GET {{Ssiu.Api_HostAddress}}/api/Zones/asignar?lat=-1.2665&lng=-78.6250
+Accept: application/json
+
+### 5. Crear Alerta (Detección Automática de Zona)
+POST {{Ssiu.Api_HostAddress}}/api/Alerts
+Content-Type: application/json
+
+{
+  "usuarioId": 3,
+  "lat": -1.2675,
+  "lng": -78.6245
+}
+
+### 6. Ver Alertas Creadas
+GET {{Ssiu.Api_HostAddress}}/api/Alerts
+Accept: application/json

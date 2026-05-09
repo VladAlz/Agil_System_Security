@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Ssiu.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3d6d998fb544d567f232f76338896407f0d11528")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+290d69e083ee6fd121072d4732423d5b688db8a8")]
 [assembly: System.Reflection.AssemblyProductAttribute("Ssiu.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Ssiu.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

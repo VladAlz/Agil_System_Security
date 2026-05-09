@@ -7,41 +7,25 @@ import { Label } from "@/components/ui/label";
 import { Shield, Lock, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
-      const response = await fetch("http://localhost:5233/api/Auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ correo: email, password })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("ssiu_token", data.token);
-        localStorage.setItem("ssiu_user", JSON.stringify(data.usuario));
-        toast.success(`Bienvenido, ${data.usuario.nombre}`);
-        navigate("/");
-      } else {
-        const errorData = await response.json();
-        toast.error("Credenciales incorrectas", {
-          description: errorData.mensaje || "Por favor verifica tu correo y contraseña."
-        });
-      }
+      await login(email, password);
+      // La navegación se maneja dentro del AuthContext
     } catch (error) {
-      toast.error("Error de conexión", {
-        description: "No se pudo conectar con el servidor backend."
-      });
+      // El error ya se maneja con un toast en el AuthContext
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -100,9 +84,9 @@ const Login = () => {
             <Button 
               type="submit" 
               className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold h-11 shadow-lg shadow-destructive/20 transition-all active:scale-[0.98]" 
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
-              {isLoading ? (
+              {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Iniciando sesión...
