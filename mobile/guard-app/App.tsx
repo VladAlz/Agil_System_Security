@@ -8,10 +8,12 @@ import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AlertDetailScreen from './src/screens/AlertDetailScreen';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import AlertListScreen from './src/screens/AlertListScreen';
 
 export type GuardStackParamList = {
   Login: undefined;
   Dashboard: undefined;
+  AlertList: undefined;
   AlertDetail: { alertId: string };
 };
 
@@ -45,6 +47,7 @@ function AppNavigator() {
         {isAuthenticated ? (
           <>
             <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="AlertList" component={AlertListScreen} />
             <Stack.Screen name="AlertDetail" component={AlertDetailScreen} />
           </>
         ) : (

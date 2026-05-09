@@ -272,7 +272,13 @@ export default function DashboardScreen({ navigation }: any) {
           )}
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>Alertas Recientes</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Alertas Recientes</Text>
+
+          <TouchableOpacity onPress={() => navigation.navigate('AlertList')}>
+            <Text style={styles.viewAllText}>Ver todas</Text>
+          </TouchableOpacity>
+        </View>
 
         <FlatList
           data={alerts}
@@ -440,8 +446,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    paddingHorizontal: 24,
-    marginBottom: 12,
   },
   list: {
     paddingHorizontal: 24,
@@ -501,5 +505,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginTop: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  viewAllText: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
   },
 });
