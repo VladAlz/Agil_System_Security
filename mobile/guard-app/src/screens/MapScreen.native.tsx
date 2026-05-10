@@ -23,14 +23,50 @@ import { LeafletMap } from '../components/LeafletMap';
 
 let MapView: any = null;
 let Marker: any = null;
+let Polygon: any = null;
 let PROVIDER_GOOGLE: any = null;
 
 if (Platform.OS !== 'web') {
   const Maps = require('react-native-maps');
   MapView = Maps.default;
   Marker = Maps.Marker;
+  Polygon = Maps.Polygon;
   PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
 }
+
+const ZONES_COORDS = {
+  "1": [ // Z1: Azul
+    { latitude: -1.266403, longitude: -78.625312 }, { latitude: -1.267101, longitude: -78.625493 }, 
+    { latitude: -1.267619, longitude: -78.625643 }, { latitude: -1.267394, longitude: -78.624758 }, 
+    { latitude: -1.267828, longitude: -78.624503 }, { latitude: -1.267693, longitude: -78.624075 },
+    { latitude: -1.266852, longitude: -78.624276 }, { latitude: -1.266477, longitude: -78.624359 }, 
+    { latitude: -1.266470, longitude: -78.624768 }
+  ],
+  "2": [ // Z2: Verde (Cambiado a Verde según plan)
+    { latitude: -1.267714, longitude: -78.625654 }, { latitude: -1.267416, longitude: -78.624725 }, 
+    { latitude: -1.267848, longitude: -78.624568 }, { latitude: -1.267731, longitude: -78.624043 }, 
+    { latitude: -1.268145, longitude: -78.623881 }, { latitude: -1.268232, longitude: -78.624010 },
+    { latitude: -1.268361, longitude: -78.624278 }, { latitude: -1.268678, longitude: -78.624185 }, 
+    { latitude: -1.268798, longitude: -78.624850 }, { latitude: -1.268414, longitude: -78.624999 }, 
+    { latitude: -1.268746, longitude: -78.625922 }, { latitude: -1.266403, longitude: -78.625312 }
+  ],
+  "3": [ // Z3: Naranja
+    { latitude: -1.268034, longitude: -78.623935 }, { latitude: -1.268067, longitude: -78.623789 }, 
+    { latitude: -1.267916, longitude: -78.623342 }, { latitude: -1.267111, longitude: -78.623338 }, 
+    { latitude: -1.266572, longitude: -78.623173 }, { latitude: -1.266471, longitude: -78.623637 },
+    { latitude: -1.266471, longitude: -78.624359 }
+  ],
+  "4": [ // Z4: Rojo
+    { latitude: -1.268747, longitude: -78.625948 }, { latitude: -1.268431, longitude: -78.624992 }, 
+    { latitude: -1.268851, longitude: -78.624857 }, { latitude: -1.268655, longitude: -78.624201 }, 
+    { latitude: -1.268294, longitude: -78.624264 }, { latitude: -1.267994, longitude: -78.623337 },
+    { latitude: -1.268814, longitude: -78.623302 }, { latitude: -1.269338, longitude: -78.623293 }, 
+    { latitude: -1.269575, longitude: -78.623386 }, { latitude: -1.269662, longitude: -78.623470 }, 
+    { latitude: -1.269957, longitude: -78.623845 }, { latitude: -1.270194, longitude: -78.622425 },
+    { latitude: -1.270935, longitude: -78.622283 }, { latitude: -1.270364, longitude: -78.626346 }, 
+    { latitude: -1.268743, longitude: -78.625958 }
+  ]
+};
 
 const UTA_LOCATION = {
   latitude: -1.267584,
@@ -98,7 +134,7 @@ export default function MapScreen({ navigation }: any) {
         <View style={styles.headerTextContainer}>
           <Text style={styles.title}>Mapa del Guardia</Text>
           <Text style={styles.subtitle}>
-            Ubicación actual y zona asignada
+            Ubicación actual y zonas del campus
           </Text>
         </View>
       </View>
@@ -152,25 +188,51 @@ export default function MapScreen({ navigation }: any) {
             initialRegion={{
               latitude,
               longitude,
-              latitudeDelta: 0.006,
-              longitudeDelta: 0.006,
+              latitudeDelta: 0.008,
+              longitudeDelta: 0.008,
             }}
             region={{
               latitude,
               longitude,
-              latitudeDelta: 0.006,
-              longitudeDelta: 0.006,
+              latitudeDelta: 0.008,
+              longitudeDelta: 0.008,
             }}
             showsUserLocation
             showsMyLocationButton
           >
+            {/* Zonas HU-04 */}
+            <Polygon
+              coordinates={ZONES_COORDS["1"]}
+              fillColor="rgba(37, 99, 235, 0.2)"
+              strokeColor="#2563eb"
+              strokeWidth={2}
+            />
+            <Polygon
+              coordinates={ZONES_COORDS["2"]}
+              fillColor="rgba(34, 197, 94, 0.2)"
+              strokeColor="#22c55e"
+              strokeWidth={2}
+            />
+            <Polygon
+              coordinates={ZONES_COORDS["3"]}
+              fillColor="rgba(245, 158, 11, 0.2)"
+              strokeColor="#f59e0b"
+              strokeWidth={2}
+            />
+            <Polygon
+              coordinates={ZONES_COORDS["4"]}
+              fillColor="rgba(239, 68, 68, 0.2)"
+              strokeColor="#ef4444"
+              strokeWidth={2}
+            />
+
             <Marker
               coordinate={{
                 latitude,
                 longitude,
               }}
-              title="Ubicación del guardia"
-              description={guard?.zonaNombre || 'Zona asignada'}
+              title="Tu ubicación"
+              description={guard?.zonaNombre || 'Guardia'}
               pinColor="blue"
             />
           </MapView>
@@ -179,7 +241,7 @@ export default function MapScreen({ navigation }: any) {
         <View style={styles.mapBadge}>
           <Navigation size={15} color="#fff" />
           <Text style={styles.mapBadgeText}>
-            Guardia ubicado · {guard?.zonaNombre || 'Sin zona'}
+            Campus UTA · Zonas Activas
           </Text>
         </View>
       </View>
