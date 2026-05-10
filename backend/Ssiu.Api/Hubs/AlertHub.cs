@@ -6,12 +6,12 @@ namespace Ssiu.Api.Hubs
     {
         public async Task JoinZoneGroup(int zonaId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"zona-{zonaId}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"zona_{zonaId}");
         }
 
         public async Task LeaveZoneGroup(int zonaId)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"zona-{zonaId}");
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"zona_{zonaId}");
         }
 
         public async Task JoinAdminGroup()
