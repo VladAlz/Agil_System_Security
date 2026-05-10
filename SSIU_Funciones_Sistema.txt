@@ -1,0 +1,115 @@
+================================================================================
+          S.S.I.U. - SISTEMA DE SEGURIDAD INTEGRAL UNIVERSITARIA
+         DOCUMENTACIÓN DETALLADA: TAREAS, PROPÓSITOS Y CONEXIONES
+================================================================================
+
+Este documento explica a fondo cada tarea técnica realizada en el Sprint 1, 
+su utilidad práctica y cómo se entrelazan para formar el ecosistema de seguridad.
+
+--------------------------------------------------------------------------------
+1. ALEN - TECH LEAD / BACKEND & ARQUITECTURA
+--------------------------------------------------------------------------------
+
+[T01-01/05] Arquitectura de Seguridad y Base de Datos
+- ¿Para qué sirve?: Establece los cimientos del sistema. Permite que el software 
+  "reconozca" quién es un estudiante, un guardia o un administrador, protegiendo 
+  la información mediante contraseñas cifradas (BCrypt).
+- Conexión: Es el punto de entrada para las 3 aplicaciones. Sin este esquema, 
+  Vladimir, Gaby y William no podrían validar el acceso de los usuarios en sus 
+  respectivas plataformas.
+
+[T02-07] Microservicio de Alertas y Persistencia
+- ¿Para qué sirve?: Es el "cerebro" que recibe los pedidos de auxilio. Se encarga 
+  de guardar permanentemente cada incidente (quién, dónde, cuándo) para que no 
+  se pierda ninguna emergencia.
+- Conexión: Recibe los datos directamente desde la User App (Vladimir) y, una 
+  vez guardados, dispara la notificación al motor de tiempo real para avisar 
+  a los guardias.
+
+[T03-01/03] Motor de Tiempo Real (SignalR Hub)
+- ¿Para qué sirve?: Elimina la necesidad de "actualizar" la página para ver una 
+  alerta. Crea un túnel de comunicación instantánea entre el servidor y las apps. 
+  Gestiona "grupos" para que un guardia de la Zona A no sea molestado por una 
+  alerta en la Zona D.
+- Conexión: Es el puente vital entre la emergencia activada por Vladimir y la 
+  notificación recibida por William (móvil) y Gaby (web).
+
+[T04-01/02] Inteligencia Geográfica (Zonificación)
+- ¿Para qué sirve?: Traduce coordenadas de GPS (números complejos) a nombres 
+  entendibles como "Sector FISEI" o "Administración". Automatiza el despacho 
+  de guardias sin intervención humana.
+- Conexión: Al recibir una alerta de la User App, el backend consulta este 
+  servicio para saber a qué grupo de guardias de William debe notificar.
+
+--------------------------------------------------------------------------------
+2. VLADIMIR - USER APP / QA MANAGER
+--------------------------------------------------------------------------------
+
+[T01-06/07] Autenticación y Persistencia Local
+- ¿Para qué sirve?: Permite que el estudiante solo tenga que iniciar sesión una 
+  vez. Guarda un "token" de seguridad en el celular para que la app esté lista 
+  para usarse al instante en una emergencia.
+- Conexión: Se comunica con el AuthController de Alen para validar el acceso.
+
+[T02-01/04] Botón de Pánico con Regla de 3 Segundos
+- ¿Para qué sirve?: Es la interfaz de salvamento. La regla de los 3 segundos 
+  filtra "falsos positivos" (toques accidentales en el bolsillo). La animación 
+  y vibración dan calma al usuario confirmando que el sistema está trabajando.
+- Conexión: Al completarse el tiempo, activa la cadena de eventos que llega 
+  hasta el servidor de Alen.
+
+[T02-05/06] Geolocalización de Alta Precisión
+- ¿Para qué sirve?: Obtiene la posición exacta del estudiante. Sin esto, los 
+  guardias sabrían "quién" pide ayuda pero no "dónde" encontrarlo.
+- Conexión: Los datos obtenidos se empaquetan y se envían al microservicio 
+  de alertas de Alen para su procesamiento.
+
+[QA] Pruebas de Estrés y Validación
+- ¿Para qué sirve?: Garantiza que el botón no falle en el momento más crítico. 
+  Simula situaciones de baja red y asegura que la lógica de tiempo sea exacta.
+- Conexión: Valida que el trabajo de todos (Backend y Apps) funcione como un 
+  solo bloque sin errores.
+
+--------------------------------------------------------------------------------
+3. GABY - FRONTEND WEB / DASHBOARD
+--------------------------------------------------------------------------------
+
+[T03-06] Cliente de Monitoreo en Tiempo Real
+- ¿Para qué sirve?: Permite que el administrador supervise todo el campus desde 
+  una oficina. El panel se actualiza solo en milisegundos cuando hay una alerta.
+- Conexión: Se "suscribe" al SignalR Hub de Alen para escuchar todos los eventos 
+  del sistema.
+
+[T04-03/04] Mapa Base y Capas de Zonificación
+- ¿Para qué sirve?: Proporciona contexto visual. Ver un polígono rojo sobre la 
+  Facultad de Auditoría es mucho más rápido que leer una dirección de texto.
+- Conexión: Utiliza las coordenadas y colores definidos en el microservicio 
+  de zonas de Alen para asegurar que la web y el servidor "hablen el mismo idioma".
+
+--------------------------------------------------------------------------------
+4. WILLIAM - GUARD APP DEVELOPER
+--------------------------------------------------------------------------------
+
+[T03-04/05] Receptor de Alertas Críticas
+- ¿Para qué sirve?: Es la herramienta de trabajo del guardia. Transforma el 
+  celular en un receptor de radio avanzado que muestra fotos y datos del 
+  estudiante que necesita ayuda.
+- Conexión: Recibe las señales del Hub de Alen filtradas por la zona del guardia.
+
+[T05-03/05] Toggle de Disponibilidad (Turno Activo)
+- ¿Para qué sirve?: Protege el descanso del personal y optimiza el sistema. 
+  Si un guardia no está en servicio, el sistema no pierde tiempo intentando 
+  enviarle datos, enviándolos solo a quienes pueden responder.
+- Conexión: Al cambiar el estado, se comunica con el backend para que Alen 
+  actualice los "grupos de notificación" en tiempo real.
+
+--------------------------------------------------------------------------------
+RESUMEN DEL FLUJO DE CONEXIÓN (EL VIAJE DE UNA ALERTA)
+--------------------------------------------------------------------------------
+1.  EL ESTUDIANTE (User App - Vladimir) mantiene el botón 3s.
+2.  LA APP captura el GPS y envía los datos al BACKEND (Alerts - Alen).
+3.  EL BACKEND identifica la zona (Zonificación - Alen) y guarda el registro.
+4.  EL MOTOR (SignalR - Alen) identifica qué guardias están "En Servicio" 
+    (Disponibilidad - William) en esa zona.
+5.  EL DASHBOARD (Web - Gaby) y la GUARD APP (Móvil - William) reciben la 
+    notificación al instante con el mapa actualizado.

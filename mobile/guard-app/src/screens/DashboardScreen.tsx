@@ -56,8 +56,9 @@ export default function DashboardScreen({ navigation }: any) {
     (bAlert: SignalRAlert) => {
       const mapped: Alert = {
         id: bAlert.id.toString(),
-        user: bAlert.usuario?.nombre || 'Desconocido',
-        location: bAlert.zona?.nombre || 'Ubicación desconocida',
+        // Nuevo modelo desnormalizado: nombreUsuario y nombreZona vienen directamente
+        user: (bAlert as any).nombreUsuario || bAlert.usuario?.nombre || 'Desconocido',
+        location: (bAlert as any).nombreZona || bAlert.zona?.nombre || 'Ubicación desconocida',
         time: 'Ahora',
         type: 'Pánico',
         severity: 'High',
@@ -105,9 +106,10 @@ export default function DashboardScreen({ navigation }: any) {
 
       const mappedData: Alert[] = data.map((bAlert: any) => ({
         id: bAlert.id.toString(),
-        user: bAlert.usuario?.nombre || 'Desconocido',
-        location: bAlert.zona?.nombre || 'Ubicación desconocida',
-        time: 'Ahora',
+        // Nuevo modelo desnormalizado: nombreUsuario y nombreZona vienen directamente
+        user: bAlert.nombreUsuario || bAlert.usuario?.nombre || 'Desconocido',
+        location: bAlert.nombreZona || bAlert.zona?.nombre || 'Ubicación desconocida',
+        time: new Date(bAlert.fechaHora).toLocaleTimeString(),
         type: 'Pánico',
         severity: 'High',
         coords: { x: 50, y: 50 },

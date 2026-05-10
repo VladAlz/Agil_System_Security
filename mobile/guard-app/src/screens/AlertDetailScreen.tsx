@@ -129,9 +129,12 @@ export default function AlertDetailScreen({ route, navigation }: any) {
   const lat = alert.lat || -1.267584;
   const lng = alert.lng || -78.624025;
 
-  const userName = alert.usuario?.nombre || 'Usuario desconocido';
-  const faculty = alert.usuario?.facultad || 'Facultad no registrada';
-  const zoneName = alert.zona?.nombre || 'Zona no asignada';
+  // Usar campos desnormalizados del nuevo modelo de microservicios
+  const userName = (alert as any).nombreUsuario || alert.usuario?.nombre || 'Usuario desconocido';
+  const faculty  = (alert as any).facultad || alert.usuario?.facultad || 'Facultad no registrada';
+  const zoneName = (alert as any).nombreZona || alert.zona?.nombre || 'Zona no asignada';
+  const userEmail = (alert as any).correoUsuario || alert.usuario?.correo || 'No disponible';
+
   const currentStatus = alert.estado || 'Activa';
   const isOnTheWay = currentStatus === 'En Camino';
 
@@ -231,7 +234,7 @@ export default function AlertDetailScreen({ route, navigation }: any) {
               <View>
                 <Text style={styles.infoLabel}>Correo del usuario</Text>
                 <Text style={styles.infoValue}>
-                  {alert.usuario?.correo || 'No disponible'}
+                  {userEmail}
                 </Text>
               </View>
             </View>

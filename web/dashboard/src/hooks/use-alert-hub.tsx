@@ -2,8 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import * as signalR from "@microsoft/signalr";
 import { Alert, alerts as initialAlerts } from "@/data/alerts";
 import { toast } from "sonner";
-
-const HUB_URL = "http://192.168.1.61:5233/alerthub";
+import { API_URL, HUB_URL } from "@/config/api";
 
 export const useAlertHub = () => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
@@ -22,7 +21,7 @@ export const useAlertHub = () => {
 
   useEffect(() => {
     // 1. Fetch initial alerts from backend
-    fetch("http://192.168.1.61:5233/api/Alerts")
+    fetch(`${API_URL}/alerts`)
       .then(res => res.json())
       .then(data => {
         const mappedAlerts = data.map(mapBackendAlertToFrontend);
@@ -69,22 +68,25 @@ export const useAlertHub = () => {
   }, [connection]);
 
   // Helper para mapear el modelo de C# al de React
+  // Compatible con el nuevo modelo desnormalizado de Alerts.Service
   const mapBackendAlertToFrontend = (bAlert: any): Alert => {
+    const nombreUsuario = bAlert.nombreUsuario || bAlert.usuario?.nombre || "Desconocido";
+    const nombreZona    = bAlert.nombreZona    || bAlert.zona?.nombre    || "Zona Desconocida";
     return {
       id: bAlert.id.toString(),
       code: `ALT-${1000 + bAlert.id}`,
       user: {
-        name: bAlert.usuario?.nombre || "Desconocido",
-        role: bAlert.usuario?.rol || "Estudiante",
+        name:    nombreUsuario,
+        role:    bAlert.usuario?.rol || "Estudiante",
         faculty: bAlert.usuario?.facultad || "",
-        phone: "+593 99 000 0000",
-        avatar: bAlert.usuario?.nombre?.substring(0,2).toUpperCase() || "?",
+        phone:   "+593 99 000 0000",
+        avatar:  nombreUsuario.substring(0, 2).toUpperCase(),
       },
       type: "panic",
       status: bAlert.estado === "Activa" ? "active" : "closed",
-      zone: bAlert.zona?.nombre || "Zona Desconocida",
-      location: `Lat: ${bAlert.lat.toFixed(4)}, Lng: ${bAlert.lng.toFixed(4)}`,
-      coords: { x: 50, y: 50 }, // Valor por defecto visual
+      zone: nombreZona,
+      location: `Lat: ${bAlert.lat?.toFixed(4)}, Lng: ${bAlert.lng?.toFixed(4)}`,
+      coords: { x: 50, y: 50 },
       createdAt: new Date(bAlert.fechaHora).toLocaleTimeString(),
       description: "Alerta real recibida desde backend C#.",
       trustGroup: [],

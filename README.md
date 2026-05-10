@@ -1,69 +1,85 @@
 # S.S.I.U. — Sistema de Seguridad Integral Universitaria
 **Universidad Técnica de Ambato (FISEI)**
 
-Este es el repositorio oficial del sistema S.S.I.U. para el **Sprint 1**. El proyecto integra un Backend en .NET 8, una base de datos SQL Server, un Dashboard administrativo Web y dos Aplicaciones Móviles.
+Este es el repositorio oficial del sistema S.S.I.U. El proyecto ha migrado de un monolito a una **Arquitectura de Microservicios** en .NET 8, bases de datos SQL Server independientes por servicio, un API Gateway (Ocelot) y Aplicaciones Móviles dinámicas.
 
 ---
 
-## 🚀 Estado del Proyecto: Sprint 1 (Integración Completa)
+## 🚀 Arquitectura y Estado (Microservicios)
 
-El sistema ha superado la fase de maqueta y ahora es **funcional al 100%** con datos reales persistidos en SQL Server.
-
-### Componentes Activos:
-*   **Backend:** API REST + SignalR (Real-time).
-*   **Web Dashboard:** Panel de monitoreo con Mapa de 4 Zonas (FISEI, Auditoría, Administración, Áreas Verdes).
-*   **User App:** Aplicación para estudiantes con botón de pánico de 3 segundos (Lógica de presión + Vibración).
-*   **Guard App:** Aplicación para guardias (Sprint 1: Recepción de alertas).
+El sistema ahora está desacoplado y funciona de forma distribuida:
+*   **Identity.Service (5001):** Gestión de usuarios, autenticación y base de datos `SsiuIdentityDb`.
+*   **Alerts.Service (5002):** Almacenamiento desnormalizado de alertas (`SsiuAlertsDb`) y WebSockets en tiempo real vía SignalR.
+*   **Campus.Service (5003):** Gestión de zonas geográficas (`SsiuCampusDb`).
+*   **Ssiu.Gateway (5000):** Ocelot API Gateway. Todo el tráfico HTTP pasa por aquí.
 
 ---
 
-## 🛠️ Guía de Ejecución para el Equipo
+## 🛠️ Guía de Ejecución para el Equipo (6 Terminales Necesarias)
 
-Para que la comunicación entre celular y PC funcione, sigan este orden estrictamente:
+Para correr el proyecto completo en tu PC local, debes abrir **6 terminales** y ejecutar los siguientes comandos en orden.
 
-### 1. Preparar el Backend (IMPORTANTE)
-Para que el celular físico pueda enviar alertas, el servidor debe escuchar en todas las interfaces de tu red.
-1. Abre una terminal en: `backend/Ssiu.Api`
-2. Ejecuta:
+### 💻 1. Levantar los Microservicios (Backend)
+Debes abrir **4 terminales**, una por cada proyecto dentro de la carpeta `backend/microservices`:
+
+**Terminal 1 (Identidad):**
 ```bash
-dotnet run --urls "http://0.0.0.0:5233"
+cd backend/microservices/Identity.Service
+dotnet run
 ```
-> **Nota:** Verifica tu IP local (ej. `192.168.1.61`) usando `ipconfig` en Windows. Esa es la IP que usan las apps para conectarse.
 
-### 2. Dashboard Web (Admin)
-1. Abre una terminal en: `web/dashboard`
-2. Ejecuta:
+**Terminal 2 (Alertas y SignalR):**
 ```bash
-npm run dev
+cd backend/microservices/Alerts.Service
+dotnet run
 ```
-*   **Login:** `admin@uta.edu.ec` / `admin123`
 
-### 3. User App (Estudiante)
-Para probar en tu celular real:
-1. Abre una terminal en: `mobile/user-app`
-2. Ejecuta:
+**Terminal 3 (Zonas y Campus):**
 ```bash
+cd backend/microservices/Campus.Service
+dotnet run
+```
+
+**Terminal 4 (API Gateway):**
+```bash
+cd backend/microservices/Ssiu.Gateway
+dotnet run
+```
+
+### 📱 2. Levantar los Frontends (Móviles)
+*Nota:* Las apps ya detectan tu IP Wi-Fi automáticamente gracias a `expo-constants`. No necesitas cambiar la IP manualmente.
+
+**Terminal 5 (App Estudiante):**
+```bash
+cd mobile/user-app
 npx expo start
 ```
-3. Escanea el código QR con la app **Expo Go** (Android) o la Cámara (iOS).
-*   **Login Estudiante:** `estudiante@uta.edu.ec` / `student123`
-*   **Login Estudiante2:** `carlos.perez2@uta.edu.ec` / `perez123password`
-*   **Acción:** Mantén presionado el botón SOS por 3 segundos para activar SignalR.
 
-### 4. Guard App (Seguridad)
-1. Abre una terminal en: `mobile/guard-app`
-2. Ejecuta:
+**Terminal 6 (App Guardia):**
 ```bash
+cd mobile/guard-app
 npx expo start
 ```
-*   **Login Guardia:** `guardia1@uta.edu.ec` / `guard123`
 
 ---
 
-## 💡 Tips de Desarrollo (Sprint 1)
-*   **Base de Datos:** Asegúrate de tener SQL Server corriendo. El sistema usa `Trusted_Connection=True` por defecto.
-*   **Firewall:** Si el celular no conecta, intenta desactivar temporalmente el Firewall de Windows o permitir el puerto `5233`.
-*   **Clean Code:** Se han eliminado los archivos `.tmp` y carpetas vacías para facilitar la navegación en el "Laberinto" de archivos.
+## 🔑 Credenciales por Defecto (Modo Desarrollo)
+
+Las bases de datos se crean y pueblan automáticamente. Las contraseñas ahora se guardan en **texto plano** en el `IdentityDbContext` para facilitar el ingreso de usuarios directo desde SQL Server Management Studio (SSMS).
+
+*   **Administrador:** `admin@uta.edu.ec` / `admin123`
+*   **Guardia:** `guardia1@uta.edu.ec` / `guard123`
+*   **Estudiante 1:** `estudiante@uta.edu.ec` / `student123`
+*   **Estudiante 2:** `carlos.perez2@uta.edu.ec` / `perez123password`
+
+*(Para agregar más estudiantes, simplemente haz un `INSERT` en la tabla `Users` de la base de datos `SsiuIdentityDb` usando SSMS).*
+
+---
+
+## 💡 Tips de Solución de Errores
+*   **Conexión en celular:** Si la app en tu teléfono físico se queda cargando eternamente, **desactiva el Firewall de Windows Defender**. Este bloquea los puertos 5000, 5001 y 5002 por defecto.
+*   **Bases de Datos Viejas:** Si hay errores de esquema al correr `dotnet run`, abre SSMS y elimina las bases de datos `SsiuIdentityDb`, `SsiuAlertsDb` y `SsiuCampusDb` (`DROP DATABASE...`). Al volver a correr, se crearán limpias.
+*   **IP Dinámica:** Si Expo no logra extraer tu IP, el código hace un fallback seguro a la última IP registrada (`192.168.1.61`). Si estás en otra red, modifica temporalmente ese fallback en los archivos `config/api.ts` de cada app.
 
 ---
 
