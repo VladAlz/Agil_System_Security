@@ -1,5 +1,5 @@
 import * as signalR from '@microsoft/signalr';
-import { ALERT_API } from './alertService';
+import { HUB_URL } from '../config/api';
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null;
@@ -8,7 +8,7 @@ class SignalRService {
     if (this.connection) return;
 
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${ALERT_API}/hubs/alerts`)
+      .withUrl(HUB_URL)
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Information)
       .build();

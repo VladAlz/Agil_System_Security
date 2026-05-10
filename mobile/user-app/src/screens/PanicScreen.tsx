@@ -6,6 +6,8 @@ import PanicButton from '../components/PanicButton';
 import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../../App';
 
+import { BASE_URL } from '../config/api';
+
 type Props = NativeStackScreenProps<RootStackParamList, 'Panic'>;
 
 export default function PanicScreen({ navigation }: Props) {
@@ -39,8 +41,6 @@ export default function PanicScreen({ navigation }: Props) {
         lat: -1.2665,
         lng: -78.6245
       };
-
-      const BASE_URL = 'http://192.168.1.61:5233/api';
 
       await fetch(`${BASE_URL}/Alerts`, {
         method: "POST",

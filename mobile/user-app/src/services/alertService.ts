@@ -1,26 +1,31 @@
 import type { AlertPayload, AlertResponse } from '../types';
+import { BASE_URL } from '../config/api';
 
-const ALERT_API = process.env.EXPO_PUBLIC_ALERT_API_URL ?? 'http://10.0.2.2:5002';
-
-// Sprint 1 stub — Sprint 2 conecta a Alert.API real
+// Sprint 1 - Conecta al backend real Ssiu.Api
 export const alertService = {
   async sendAlert(payload: AlertPayload): Promise<AlertResponse> {
-    if (!payload.userId) {
-      return Promise.reject(new Error('userId is required'));
+    const response = await fetch(`${BASE_URL}/Alerts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuarioId: parseInt(payload.userId || '0'),
+        lat: payload.latitude,
+        lng: payload.longitude
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Error al enviar la alerta');
     }
-    return new Promise<AlertResponse>((resolve) =>
-      setTimeout(
-        () =>
-          resolve({
-            id: `alert-${Date.now()}`,
-            status: 'Active',
-            zoneId: 1,
-            message: 'Alerta enviada. Guardias notificados.',
-          }),
-        500,
-      ),
-    );
+
+    const data = await response.json();
+    return {
+      id: data.id.toString(),
+      status: data.estado,
+      zoneId: data.zonaId,
+      message: 'Alerta enviada con éxito'
+    };
   },
 };
 
-export { ALERT_API };
+export const ALERT_API = BASE_URL;
