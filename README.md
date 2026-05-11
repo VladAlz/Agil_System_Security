@@ -89,8 +89,12 @@ npx expo start
 ```bash
 cd mobile/guard-app
 npx expo start
+
 ```
 
+**Terminal 6 (App Admin):**
+cd web/dashboard
+npm run dev
 ---
 
 ## 🔑 Credenciales por Defecto (Modo Desarrollo)
