@@ -46,6 +46,36 @@ cd backend/microservices/Ssiu.Gateway
 dotnet run
 ```
 
+---
+
+## 🗄️ Sincronización de Base de Datos (EF Core Migrations)
+
+Si es la primera vez que clonas el repo o si ha habido cambios en las tablas, debes sincronizar tu base de datos local de SQL Server.
+
+**Importante:** Ejecuta estos 3 comandos en terminales diferentes para que se creen las tablas en tu PC:
+
+1. **Tablas de Identidad:**
+   ```bash
+   cd backend/microservices/Identity.Service
+   dotnet ef database update
+   ```
+
+2. **Tablas de Alertas:**
+   ```bash
+   cd backend/microservices/Alerts.Service
+   dotnet ef database update
+   ```
+
+3. **Tablas de Campus/Zonas:**
+   ```bash
+   cd backend/microservices/Campus.Service
+   dotnet ef database update
+   ```
+
+*(Nota: Si no tienes instalada la herramienta de EF Core, ejecuta `dotnet tool install --global dotnet-ef` primero).*
+
+---
+
 ### 📱 2. Levantar los Frontends (Móviles)
 *Nota:* Las apps ya detectan tu IP Wi-Fi automáticamente gracias a `expo-constants`. No necesitas cambiar la IP manualmente.
 
