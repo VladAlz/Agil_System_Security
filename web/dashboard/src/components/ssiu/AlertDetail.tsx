@@ -12,6 +12,7 @@ import {
   Radio,
   Maximize2,
   Minimize2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { InteractiveMap } from "./InteractiveMap";
 
 interface Props {
   alert: Alert;
+  onClose?: () => void;
 }
 
 // Mapeo simple de coordenadas relativas a Lat/Lng para la UTA centradas en los bloques principales
@@ -37,7 +39,7 @@ const getLatLng = (x: number, y: number): [number, number] => {
   return [lat, lng];
 };
 
-export const AlertDetail = ({ alert }: Props) => {
+export const AlertDetail = ({ alert, onClose }: Props) => {
   const [conclusion, setConclusion] = useState("");
   const [isZoomed, setIsZoomed] = useState(false);
   const [focusedZone, setFocusedZone] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export const AlertDetail = ({ alert }: Props) => {
   const [lat, lng] = getLatLng(alert.coords.x, alert.coords.y);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background/50">
+    <div className="flex-1 overflow-y-auto bg-background/50 relative">
       {/* Map header */}
       <div 
         className={cn(
@@ -57,7 +59,12 @@ export const AlertDetail = ({ alert }: Props) => {
         )}
         ref={mapRef}
       >
-        <InteractiveMap lat={lat} lng={lng} isActive={isActive} focusedZone={focusedZone} />
+        <InteractiveMap 
+          alerts={[alert]} 
+          selectedId={alert.id} 
+          onSelect={() => {}} 
+          focusedZone={focusedZone} 
+        />
 
 
 
@@ -108,7 +115,15 @@ export const AlertDetail = ({ alert }: Props) => {
         className="p-6 space-y-8"
       >
         {/* User Info Header */}
-        <div className="flex items-start gap-6">
+        <div className="flex items-start gap-6 relative">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="absolute -top-2 -right-2 p-2 rounded-full hover:bg-muted/80 transition-colors"
+            >
+              <X className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
           <div className="relative">
             <div className="w-20 h-20 rounded-3xl bg-sunset flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-sunset/30">
               {alert.user.avatar}
@@ -120,7 +135,7 @@ export const AlertDetail = ({ alert }: Props) => {
             )}
           </div>
           
-          <div className="flex-1 space-y-1">
+          <div className="flex-1 space-y-1 pr-6">
             <div className="flex items-center gap-3">
               <h2 className="text-3xl font-black tracking-tight">{alert.user.name}</h2>
               <span className={cn(

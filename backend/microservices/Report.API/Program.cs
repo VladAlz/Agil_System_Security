@@ -1,18 +1,14 @@
-using Alerts.Service.Data;
-using Alerts.Service.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Report.API.Data;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Base de Datos ────────────────────────────────────────────────────────────
-builder.Services.AddDbContext<AlertsDbContext>(options =>
+builder.Services.AddDbContext<ReportDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// ─── SignalR ──────────────────────────────────────────────────────────────────
-builder.Services.AddSignalR();
 
 // ─── JWT ──────────────────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -31,27 +27,39 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience            = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
-
-        // Soporte JWT en WebSockets para SignalR
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/alerthub"))
-                    context.Token = accessToken;
-                return Task.CompletedTask;
-            }
-        };
     });
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// ─── Swagger con soporte JWT ───────────────────────────────────────────────────
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { Title = "Alerts.Service", Version = "v1" });
+    c.SwaggerDoc("v1", new() { Title = "Report.API — SSIU", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name         = "Authorization",
+        Type         = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme       = "Bearer",
+        BearerFormat = "JWT",
+        In           = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description  = "Escribe: Bearer {tu_token_jwt}"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id   = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
 
 // ─── HttpClient para comunicación inter-servicios ─────────────────────────────
@@ -73,37 +81,27 @@ var app = builder.Build();
 // ─── Migraciones automáticas ──────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AlertsDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<ReportDbContext>();
     try
     {
-        try
-        {
-            db.Database.Migrate();
-            Console.WriteLine("✓ Migraciones aplicadas correctamente.");
-        }
-        catch (Exception ex)
-        {
-            // La BD existe pero __EFMigrationsHistory está vacía o inconsistente.
-            // Para desarrollo: recrear BD desde cero.
-            Console.WriteLine($"⚠ Migración falló: {ex.Message}");
-            Console.WriteLine("  Recreando BD desde cero...");
-            try
-            {
-                db.Database.EnsureDeleted();
-                db.Database.Migrate();
-                Console.WriteLine("✓ BD recreada y migrada correctamente.");
-            }
-            catch (Exception ex2)
-            {
-                Console.WriteLine($"⚠ No se pudo inicializar la BD: {ex2.Message}");
-                Console.WriteLine("  El servicio iniciará igual, sin persistencia.");
-            }
-        }
+        db.Database.Migrate();
+        Console.WriteLine("✓ Migraciones aplicadas correctamente.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"⚠ No se pudo asegurar la BD: {ex.Message}");
-        Console.WriteLine("  El servicio iniciará igual.");
+        Console.WriteLine($"⚠ Migración falló: {ex.Message}");
+        Console.WriteLine("  Intentando recrear BD...");
+        try
+        {
+            db.Database.EnsureDeleted();
+            db.Database.Migrate();
+            Console.WriteLine("✓ BD recreada y migrada correctamente.");
+        }
+        catch (Exception ex2)
+        {
+            Console.WriteLine($"⚠ No se pudo inicializar la BD: {ex2.Message}");
+            Console.WriteLine("  El servicio iniciará igual, sin persistencia.");
+        }
     }
 }
 
@@ -117,6 +115,5 @@ app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<AlertHub>("/alerthub");
 
 app.Run();

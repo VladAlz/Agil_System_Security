@@ -4,6 +4,10 @@ import { BASE_URL } from '../config/api';
 // Sprint 1 - Conecta al backend real Ssiu.Api
 export const alertService = {
   async sendAlert(payload: AlertPayload): Promise<AlertResponse> {
+    if (!payload.userId) {
+      throw new Error('userId is required');
+    }
+    
     const response = await fetch(`${BASE_URL}/Alerts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

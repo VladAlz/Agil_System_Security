@@ -20,14 +20,18 @@ export const useAlertHub = () => {
   }, []);
 
   useEffect(() => {
-    // 1. Fetch initial alerts from backend
-    fetch(`${API_URL}/alerts`)
+    // 1. Fetch initial alerts from backend — usa pageSize=100 para cargar las primeras 100 alertas
+    fetch(`${API_URL}/alerts?page=0&pageSize=100`)
       .then(res => res.json())
       .then(data => {
-        const mappedAlerts = data.map(mapBackendAlertToFrontend);
-        setAlerts(mappedAlerts);
+        // La respuesta ahora es { total, page, pageSize, totalPages, items: [...] }
+        const alertsArray = Array.isArray(data) ? data : (data.items ?? []);
+        const mappedAlerts = alertsArray.map(mapBackendAlertToFrontend);
+        if (mappedAlerts.length > 0) {
+          setAlerts(mappedAlerts);
+        }
       })
-      .catch(err => console.error("Error fetching alerts:", err));
+      .catch(err => console.warn("[useAlertHub] Error fetching initial alerts:", err));
 
     // 2. Start SignalR
     if (connection) {
@@ -49,10 +53,48 @@ export const useAlertHub = () => {
             });
           });
 
-          connection.on("AlertUpdated", (updatedAlert: any) => {
-            const mapped = mapBackendAlertToFrontend(updatedAlert);
+          connection.on("onAlertAssumed", (data: any) => {
             setAlerts((prev) =>
-              prev.map((a) => (a.id === mapped.id ? mapped : a))
+              prev.map((a) =>
+                a.id === data.id?.toString()
+                  ? { ...a, status: "assigned", guard: data.guardiaAsignadoNombre }
+                  : a
+              )
+            );
+            toast.info("Alerta asumida", {
+              description: `${data.guardiaAsignadoNombre} asumió la alerta #${data.id}`,
+            });
+          });
+
+          connection.on("onGuardEnRoute", (data: any) => {
+            setAlerts((prev) =>
+              prev.map((a) =>
+                a.id === data.id?.toString() ? { ...a, status: "enroute" } : a
+              )
+            );
+          });
+
+          connection.on("onAlertResolved", (data: any) => {
+            setAlerts((prev) =>
+              prev.map((a) =>
+                a.id === data.id?.toString() ? { ...a, status: "resolved" } : a
+              )
+            );
+          });
+
+          connection.on("onAlertClosed", (data: any) => {
+            setAlerts((prev) =>
+              prev.map((a) =>
+                a.id === data.id?.toString() ? { ...a, status: "closed" } : a
+              )
+            );
+          });
+
+          connection.on("onAlertCancelled", (data: any) => {
+            setAlerts((prev) =>
+              prev.map((a) =>
+                a.id === data.id?.toString() ? { ...a, status: "cancelled" } : a
+              )
             );
           });
         })
@@ -67,42 +109,68 @@ export const useAlertHub = () => {
     }
   }, [connection]);
 
+  // Mapeo de estados del backend (español) al frontend (inglés)
+  const mapEstadoToStatus = (estado: string): Alert['status'] => {
+    const map: Record<string, Alert['status']> = {
+      'Activa':    'active',
+      'Asumida':   'assigned',
+      'En Camino': 'enroute',
+      'Resuelta':  'resolved',
+      'Cerrada':   'closed',
+      'Cancelada': 'cancelled',
+    };
+    return map[estado] || 'active';
+  };
+
   // Helper para mapear el modelo de C# al de React
   // Compatible con el nuevo modelo desnormalizado de Alerts.Service
   const mapBackendAlertToFrontend = (bAlert: any): Alert => {
     const nombreUsuario = bAlert.nombreUsuario || bAlert.usuario?.nombre || "Desconocido";
     const nombreZona    = bAlert.nombreZona    || bAlert.zona?.nombre    || "Zona Desconocida";
     return {
-      id: bAlert.id.toString(),
-      code: `ALT-${1000 + bAlert.id}`,
+      id:    bAlert.id.toString(),
+      code:  `ALT-${1000 + bAlert.id}`,
       user: {
         name:    nombreUsuario,
         role:    bAlert.usuario?.rol || "Estudiante",
-        faculty: bAlert.usuario?.facultad || "",
+        faculty: bAlert.facultad || bAlert.usuario?.facultad || "",
         phone:   "+593 99 000 0000",
         avatar:  nombreUsuario.substring(0, 2).toUpperCase(),
       },
-      type: "panic",
-      status: bAlert.estado === "Activa" ? "active" : "closed",
-      zone: nombreZona,
+      type:     "panic",
+      status:   mapEstadoToStatus(bAlert.estado),
+      zone:     nombreZona,
       location: `Lat: ${bAlert.lat?.toFixed(4)}, Lng: ${bAlert.lng?.toFixed(4)}`,
-      coords: { x: 50, y: 50 },
+      // Coordenadas GPS reales para el mapa (HU-06)
+      lat:    bAlert.lat,
+      lng:    bAlert.lng,
+      coords: { x: 50, y: 50 },   // fallback si lat/lng no llegan
       createdAt: new Date(bAlert.fechaHora).toLocaleTimeString(),
       description: "Alerta real recibida desde backend C#.",
-      trustGroup: [],
-      timeline: [{ time: new Date(bAlert.fechaHora).toLocaleTimeString(), event: "Alerta creada", actor: "Sistema Real" }]
+      guard:       bAlert.guardiaAsignadoNombre || undefined,
+      trustGroup:  [],
+      timeline:    [{ time: new Date(bAlert.fechaHora).toLocaleTimeString(), event: "Alerta creada", actor: "Sistema Real" }]
     };
   };
 
   const closeAlert = useCallback(async (alertId: string, conclusion: string) => {
-    if (connection) {
-      try {
-        await connection.invoke("CloseAlert", alertId, conclusion);
-      } catch (err) {
-        console.error("Error closing alert: ", err);
-      }
+    try {
+      const res = await fetch(`${API_URL}/alerts/${alertId}/close`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conclusion }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Actualizar estado local
+      setAlerts((prev) =>
+        prev.map((a) =>
+          a.id === alertId ? { ...a, status: "closed" } : a
+        )
+      );
+    } catch (err) {
+      console.error("Error closing alert: ", err);
     }
-  }, [connection]);
+  }, []);
 
   const manualAddAlert = useCallback((newAlert: Alert) => {
     setAlerts((prev) => [newAlert, ...prev]);

@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Alerts.Service.Models
 {
@@ -15,10 +14,20 @@ namespace Alerts.Service.Models
         public double Lat { get; set; }
         public double Lng { get; set; }
 
-        // "Activa", "En Camino", "Atendida", "Cancelada"
+        // ─── Máquina de estados: Activa → Asumida → En Camino → Resuelta → Cerrada ─
         public string Estado { get; set; } = "Activa";
 
         public DateTime FechaHora { get; set; } = DateTime.UtcNow;
+
+        // ─── Guardia asignado (lo asume quien primero presione "Asumir caso") ──────
+        public int? GuardiaAsignadoId { get; set; }
+        public string GuardiaAsignadoNombre { get; set; } = string.Empty;
+
+        // ─── Marcas de tiempo para cada transición de estado (útiles para estadísticas) ─
+        public DateTime? FechaAsumida  { get; set; }
+        public DateTime? FechaEnCamino { get; set; }
+        public DateTime? FechaResuelta { get; set; }
+        public DateTime? FechaCerrada  { get; set; }
 
         // ─── Datos desnormalizados (obtenidos de otros servicios al crear la alerta) ─
         public string NombreUsuario { get; set; } = string.Empty;

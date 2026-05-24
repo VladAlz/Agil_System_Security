@@ -23,11 +23,23 @@ class SignalRService {
   }
 
   onAlertAssumed(callback: (alertId: string, guardName: string) => void) {
-    this.connection?.on('AlertAssumed', callback);
+    this.connection?.on('onAlertAssumed', callback);
+  }
+
+  onGuardEnRoute(callback: (alertId: string, guardName: string) => void) {
+    this.connection?.on('onGuardEnRoute', callback);
+  }
+
+  onAlertResolved(callback: (alertId: string) => void) {
+    this.connection?.on('onAlertResolved', callback);
   }
 
   onAlertClosed(callback: (alertId: string, conclusion: string) => void) {
-    this.connection?.on('AlertClosed', callback);
+    this.connection?.on('onAlertClosed', callback);
+  }
+
+  onAlertCancelled(callback: (alertId: string) => void) {
+    this.connection?.on('onAlertCancelled', callback);
   }
 
   async stopConnection() {

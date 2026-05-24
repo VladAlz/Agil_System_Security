@@ -1,5 +1,6 @@
 using Campus.Service.Data;
 using Campus.Service.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Ssiu.Shared.Dtos;
@@ -8,6 +9,7 @@ namespace Campus.Service.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]                    // ← Seguridad: todos los endpoints requieren JWT válido
     public class GuardsController : ControllerBase
     {
         private readonly CampusDbContext _context;
@@ -25,6 +27,33 @@ namespace Campus.Service.Controllers
                 .Include(g => g.Zona)
                 .ToListAsync();
             return Ok(guards);
+        }
+
+        /// <summary>GET api/guards/{id} — Obtiene un guardia por ID (para validación inter-servicio).</summary>
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetGuardById(int id)
+        {
+            var guard = await _context.Guards
+                .Include(g => g.Zona)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (guard == null)
+                return NotFound(new { mensaje = "Guardia no encontrado" });
+
+            return Ok(new
+            {
+                guard.Id,
+                guard.UsuarioId,
+                guard.ZonaId,
+                guard.Estado,
+                guard.NombreGuardia,
+                Zona = guard.Zona == null ? null : new
+                {
+                    guard.Zona.Id,
+                    guard.Zona.Nombre,
+                    guard.Zona.Color
+                }
+            });
         }
 
         /// <summary>PUT api/guards/{id}/status — Actualiza el estado de disponibilidad del guardia.</summary>

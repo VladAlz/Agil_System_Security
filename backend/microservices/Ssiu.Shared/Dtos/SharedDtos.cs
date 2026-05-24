@@ -45,6 +45,12 @@ namespace Ssiu.Shared.Dtos
         public string Estado { get; set; } = string.Empty;
     }
 
+    /// <summary>DTO para que un guardia asuma una alerta (HU-09).</summary>
+    public class AssumeAlertDto
+    {
+        public int GuardiaId { get; set; }
+    }
+
     // ─── Guard DTOs ───────────────────────────────────────────────────────────
 
     public class UpdateGuardStatusDto

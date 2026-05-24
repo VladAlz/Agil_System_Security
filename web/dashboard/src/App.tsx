@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
+import Statistics from "./pages/Statistics.tsx";
+import Shifts from "./pages/Shifts.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import 'leaflet/dist/leaflet.css';
 
@@ -33,6 +35,22 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute>
           <Index />
+        </ProtectedRoute>
+      } 
+    />
+    <Route 
+      path="/statistics" 
+      element={
+        <ProtectedRoute>
+          <Statistics />
+        </ProtectedRoute>
+      } 
+    />
+    <Route 
+      path="/shifts" 
+      element={
+        <ProtectedRoute>
+          <Shifts />
         </ProtectedRoute>
       } 
     />

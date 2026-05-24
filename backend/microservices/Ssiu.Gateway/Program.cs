@@ -23,6 +23,12 @@ var app = builder.Build();
 
 app.UseCors("AllowAll");
 
+// ─── WebSockets — necesario para SignalR a través del Gateway ─────────────────
+app.UseWebSockets(new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromSeconds(30)
+});
+
 // ─── Ocelot actúa como proxy inverso para todas las rutas ─────────────────────
 await app.UseOcelot();
 

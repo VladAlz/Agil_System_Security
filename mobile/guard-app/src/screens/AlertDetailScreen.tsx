@@ -18,8 +18,10 @@ import {
   Navigation,
   Shield,
   UserRound,
+  XCircle,
 } from 'lucide-react-native';
 
+import { useAuth } from '../context/AuthContext';
 import { LeafletMap } from '../components/LeafletMap';
 import { alertService, AlertDetail } from '../services/alertService';
 
@@ -65,16 +67,68 @@ export default function AlertDetailScreen({ route, navigation }: any) {
     loadAlert();
   }, [alertId]);
 
+  const { guard } = useAuth();
+
   const handleAssumeCase = async () => {
+    if (!alert || !guard?.guardId) return;
+
+    setUpdatingStatus(true);
+
+    try {
+      // Asumir la alerta (Activa → Asumida)
+      const assumedAlert = await alertService.assumeAlert(alert.id, guard.guardId);
+      setAlert(assumedAlert);
+    } catch (err: any) {
+      alertMessage(err.message || 'No se pudo asumir el caso');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // ─── BUG FIX HU-09: "Ir en Camino" debe llamar SOLO a enRouteAlert ─────────
+  // Antes llamaba a handleAssumeCase que hacía assume+enRoute en un solo paso,
+  // lo que rompía el flujo Asumida → En Camino porque assume ya había ocurrido.
+  const handleEnRoute = async () => {
     if (!alert) return;
 
     setUpdatingStatus(true);
 
     try {
-      const updatedAlert = await alertService.updateStatus(alert.id, 'En Camino');
+      // Transición: Asumida → En Camino
+      const updatedAlert = await alertService.enRouteAlert(alert.id);
       setAlert(updatedAlert);
     } catch (err: any) {
-      alertMessage(err.message || 'No se pudo asumir el caso');
+      alertMessage(err.message || 'No se pudo marcar como "En Camino"');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleResolve = async () => {
+    if (!alert) return;
+
+    setUpdatingStatus(true);
+
+    try {
+      const updatedAlert = await alertService.arriveAlert(alert.id);
+      setAlert(updatedAlert);
+    } catch (err: any) {
+      alertMessage(err.message || 'No se pudo marcar como resuelta');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const handleClose = async () => {
+    if (!alert) return;
+
+    setUpdatingStatus(true);
+
+    try {
+      const updatedAlert = await alertService.closeAlert(alert.id);
+      setAlert(updatedAlert);
+    } catch (err: any) {
+      alertMessage(err.message || 'No se pudo cerrar la alerta');
     } finally {
       setUpdatingStatus(false);
     }
@@ -136,7 +190,6 @@ export default function AlertDetailScreen({ route, navigation }: any) {
   const userEmail = (alert as any).correoUsuario || alert.usuario?.correo || 'No disponible';
 
   const currentStatus = alert.estado || 'Activa';
-  const isOnTheWay = currentStatus === 'En Camino';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -241,28 +294,87 @@ export default function AlertDetailScreen({ route, navigation }: any) {
           </View>
 
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={[
-                styles.primaryAction,
-                isOnTheWay && styles.primaryActionDisabled,
-              ]}
-              onPress={handleAssumeCase}
-              disabled={updatingStatus || isOnTheWay}
-            >
-              {updatingStatus ? (
-                <ActivityIndicator color="#fff" />
-              ) : isOnTheWay ? (
-                <>
-                  <CheckCircle size={20} color="#fff" />
-                  <Text style={styles.primaryActionText}>Caso en camino</Text>
-                </>
-              ) : (
-                <>
-                  <Shield size={20} color="#fff" />
-                  <Text style={styles.primaryActionText}>Asumir Caso</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {currentStatus === 'Activa' && (
+              <TouchableOpacity
+                style={styles.primaryAction}
+                onPress={handleAssumeCase}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Shield size={20} color="#fff" />
+                    <Text style={styles.primaryActionText}>Asumir Caso</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {currentStatus === 'Asumida' && (
+              <TouchableOpacity
+                style={[styles.primaryAction, { backgroundColor: '#2563eb' }]}
+                onPress={handleEnRoute}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Navigation size={20} color="#fff" />
+                    <Text style={styles.primaryActionText}>Ir en Camino</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {currentStatus === 'En Camino' && (
+              <TouchableOpacity
+                style={[styles.primaryAction, { backgroundColor: '#16a34a' }]}
+                onPress={handleResolve}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <CheckCircle size={20} color="#fff" />
+                    <Text style={styles.primaryActionText}>Llegué — Resolver</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {currentStatus === 'Resuelta' && (
+              <TouchableOpacity
+                style={[styles.primaryAction, { backgroundColor: '#9333ea' }]}
+                onPress={handleClose}
+                disabled={updatingStatus}
+              >
+                {updatingStatus ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <XCircle size={20} color="#fff" />
+                    <Text style={styles.primaryActionText}>Cerrar Caso</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {currentStatus === 'Cerrada' && (
+              <View style={styles.completedBox}>
+                <CheckCircle size={20} color="#16a34a" />
+                <Text style={styles.completedText}>Caso Cerrado</Text>
+              </View>
+            )}
+
+            {currentStatus === 'Cancelada' && (
+              <View style={styles.completedBox}>
+                <XCircle size={20} color="#f59e0b" />
+                <Text style={[styles.completedText, { color: '#f59e0b' }]}>Caso Cancelado</Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={styles.secondaryAction}
@@ -464,6 +576,22 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 15,
     fontWeight: '800',
+  },
+  completedBox: {
+    minHeight: 56,
+    borderRadius: 16,
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  completedText: {
+    color: '#16a34a',
+    fontSize: 16,
+    fontWeight: '900',
   },
   centerContainer: {
     flex: 1,

@@ -19,7 +19,8 @@
       ]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "port": 8082
     }
   }
 }

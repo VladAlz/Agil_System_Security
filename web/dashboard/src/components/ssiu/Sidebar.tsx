@@ -1,16 +1,16 @@
 import { Bell, LayoutDashboard, Map, Shield, Users, BarChart3, Settings, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Simulator } from "./Simulator";
 import { Alert } from "@/data/alerts";
 
 const items = [
-  { icon: LayoutDashboard, label: "Panel", active: false },
-  { icon: Bell, label: "Alertas", active: true, badge: 2 },
-  { icon: Map, label: "Mapa UTA", active: false },
-  { icon: Users, label: "Guardias", active: false },
-  { icon: BarChart3, label: "Reportes", active: false },
-  { icon: Settings, label: "Ajustes", active: false },
+  { icon: LayoutDashboard, label: "Panel",     path: "/",           badge: 0 },
+  { icon: Bell,            label: "Alertas",   path: "/",           badge: 2 },
+  { icon: Map,             label: "Mapa UTA",  path: "/",           badge: 0 },
+  { icon: Users,           label: "Turnos",    path: "/shifts",     badge: 0 },
+  { icon: BarChart3,       label: "Reportes",  path: "/statistics", badge: 0 },
+  { icon: Settings,        label: "Ajustes",   path: "/",           badge: 0 },
 ];
 
 interface SidebarProps {
@@ -20,6 +20,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ onTriggerAlert, alertCount }: SidebarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const userStr = localStorage.getItem("ssiu_user");
   const user = userStr ? JSON.parse(userStr) : null;
   
@@ -49,13 +50,14 @@ export const Sidebar = ({ onTriggerAlert, alertCount }: SidebarProps) => {
       {items.map((it) => (
         <button
           key={it.label}
+          onClick={() => navigate(it.path)}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-smooth relative",
-            it.active
+            location.pathname === it.path
               ? "bg-sidebar-accent text-sidebar-primary-foreground shadow-glow"
               : "text-sidebar-foreground/75 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
           )}
-          style={it.active ? { background: "var(--gradient-sunset)" } : undefined}
+          style={location.pathname === it.path ? { background: "var(--gradient-sunset)" } : undefined}
         >
           <it.icon className="w-5 h-5 shrink-0" />
           <span className="hidden lg:inline">{it.label}</span>
