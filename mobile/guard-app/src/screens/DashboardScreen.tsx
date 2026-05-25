@@ -26,6 +26,7 @@ import {
   Navigation,
   LogOut,
   ShieldCheck,
+  ClipboardList,
 } from 'lucide-react-native';
 
 import { LeafletMap } from '../components/LeafletMap';
@@ -296,6 +297,14 @@ export default function DashboardScreen({ navigation }: any) {
             >
               <MapPin size={16} color="#f8fafc" />
               <Text style={styles.mapButtonText}>Mapa</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.reportButton}
+              onPress={() => navigation.navigate('Report')}
+            >
+              <ClipboardList size={16} color="#f8fafc" />
+              <Text style={styles.mapButtonText}>Reporte</Text>
             </TouchableOpacity>
 
             <View style={styles.miniStat}>
@@ -582,6 +591,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
+
+  reportButton: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
   mapButtonText: {
     color: '#f8fafc',
     fontSize: 12,
