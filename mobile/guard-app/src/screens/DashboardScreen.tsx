@@ -1,8 +1,14 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { guardService } from '../services/guardService';
-import { SignalRAlert, useSignalR } from '../hooks/useSignalR';
 import { apiFetch, extractItems } from '../services/apiClient';
+
+import {
+  NormalizedAlertStatusEvent,
+  SignalRAlert,
+  useSignalR,
+} from '../hooks/useSignalR';
+
 
 import {
   FlatList,
@@ -32,6 +38,9 @@ interface Alert {
   time: string;
   type: string;
   severity: string;
+  estado?: string;
+  guardiaAsignadoId?: number;
+  guardiaAsignadoNombre?: string;
   coords: { x: number; y: number };
 }
 
@@ -41,6 +50,22 @@ const getLatLng = (x: number, y: number): { lat: number; lng: number } => {
     lng: -78.624025 + ((x - 50) / 100) * 0.005,
   };
 };
+
+const mapAlertFromApi = (bAlert: any): Alert => ({
+  id: String(bAlert.id ?? ''),
+  user: bAlert.nombreUsuario || bAlert.usuario?.nombre || 'Desconocido',
+  location:
+    bAlert.nombreZona || bAlert.zona?.nombre || 'Ubicación desconocida',
+  time: bAlert.fechaHora
+    ? new Date(bAlert.fechaHora).toLocaleTimeString()
+    : 'Ahora',
+  type: 'Pánico',
+  severity: 'High',
+  estado: bAlert.estado,
+  guardiaAsignadoId: bAlert.guardiaAsignadoId,
+  guardiaAsignadoNombre: bAlert.guardiaAsignadoNombre,
+  coords: { x: 50, y: 50 },
+});
 
 export default function DashboardScreen({ navigation }: any) {
   const { guard, logout, updateGuardStatus } = useAuth();
@@ -52,21 +77,29 @@ export default function DashboardScreen({ navigation }: any) {
   const estadoActual = guard?.estado || 'Descansando';
   const estaDisponible = estadoActual === 'En Servicio';
 
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const data = await apiFetch<any>('/Alerts');
+
+      const alertsArray = extractItems<any>(data);
+
+      const mappedData: Alert[] = alertsArray.map(mapAlertFromApi);
+
+      setAlerts(mappedData);
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+      setAlerts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const handleAlertCreated = useCallback(
     (bAlert: SignalRAlert) => {
-      const mapped: Alert = {
-        id: bAlert.id.toString(),
-        // Nuevo modelo desnormalizado: nombreUsuario y nombreZona vienen directamente
-        user: (bAlert as any).nombreUsuario || bAlert.usuario?.nombre || 'Desconocido',
-        location: (bAlert as any).nombreZona || bAlert.zona?.nombre || 'Ubicación desconocida',
-        time: 'Ahora',
-        type: 'Pánico',
-        severity: 'High',
-        coords: { x: 50, y: 50 },
-      };
+      const mapped = mapAlertFromApi(bAlert);
 
       setAlerts((prev) => {
-        const alreadyExists = prev.some((alert) => alert.id === mapped.id);
+        const alreadyExists = prev.some((item) => item.id === mapped.id);
 
         if (alreadyExists) {
           return prev;
@@ -78,13 +111,43 @@ export default function DashboardScreen({ navigation }: any) {
       navigation.navigate('AlertDetail', {
         alertId: mapped.id,
       });
-     },
+    },
     [navigation]
   );
+
+  const handleAlertUpdated = useCallback(
+    (event: NormalizedAlertStatusEvent) => {
+      if (!event.alertId) return;
+
+      setAlerts((prevAlerts) =>
+        prevAlerts.map((item) =>
+          String(item.id) === String(event.alertId)
+            ? {
+                ...item,
+                estado: event.estado || item.estado,
+                guardiaAsignadoId: event.guardId ?? item.guardiaAsignadoId,
+                guardiaAsignadoNombre:
+                  event.guardName ?? item.guardiaAsignadoNombre,
+              }
+            : item
+        )
+      );
+    },
+    []
+  );
+
+  const handleAlertRemoved = useCallback((alertId: number | string) => {
+    setAlerts((prevAlerts) =>
+      prevAlerts.filter((item) => String(item.id) !== String(alertId))
+    );
+  }, []);
 
   const { isConnected, connectionStatus } = useSignalR({
     zonaId: guard?.zonaId,
     onAlertCreated: handleAlertCreated,
+    onAlertUpdated: handleAlertUpdated,
+    onAlertRemoved: handleAlertRemoved,
+    onReconnect: fetchAlerts,
   });
 
   const showOfflineBanner =
@@ -97,33 +160,7 @@ export default function DashboardScreen({ navigation }: any) {
 
   useEffect(() => {
     fetchAlerts();
-  }, []);
-
-  const fetchAlerts = async () => {
-    try {
-      const data = await apiFetch<any>('/Alerts');
-
-      const alertsArray = extractItems<any>(data);
-
-      const mappedData: Alert[] = alertsArray.map((bAlert: any) => ({
-        id: String(bAlert.id ?? ''),
-        user: bAlert.nombreUsuario || bAlert.usuario?.nombre || 'Desconocido',
-        location: bAlert.nombreZona || bAlert.zona?.nombre || 'Ubicación desconocida',
-        time: bAlert.fechaHora
-          ? new Date(bAlert.fechaHora).toLocaleTimeString()
-          : 'Sin hora',
-        type: 'Pánico',
-        severity: 'High',
-        coords: { x: 50, y: 50 },
-      }));
-
-      setAlerts(mappedData);
-    } catch (error) {
-      console.error('Error fetching alerts:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [fetchAlerts]);
 
   const handleToggleStatus = async () => {
     if (!guard?.guardId) {
@@ -161,7 +198,7 @@ export default function DashboardScreen({ navigation }: any) {
     id: a.id,
     ...getLatLng(a.coords.x, a.coords.y),
     title: a.user,
-    severity: a.severity,
+    severity: a.estado === 'Asumida' ? 'Medium' : a.severity,
   }));
 
   const renderItem = ({ item }: { item: Alert }) => (
@@ -182,7 +219,7 @@ export default function DashboardScreen({ navigation }: any) {
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.userName}>{item.user}</Text>
-          <Text style={styles.alertType}>{item.type}</Text>
+          <Text style={styles.alertType}>{item.estado || item.type}</Text>
         </View>
 
         <View style={styles.infoRow}>

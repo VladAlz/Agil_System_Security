@@ -20,6 +20,12 @@ import {
 } from 'lucide-react-native';
 
 import { apiFetch, extractItems } from '../services/apiClient';
+import {
+  NormalizedAlertStatusEvent,
+  SignalRAlert,
+  useSignalR,
+} from '../hooks/useSignalR';
+import { useAuth } from '../context/AuthContext';
 
 
 type AlertItem = {
@@ -50,52 +56,109 @@ function mapAlertFromApi(item: any): AlertItem {
   return {
     id: item.id?.toString() || Math.random().toString(),
     usuario:
+      item.nombreUsuario ||
       item.usuario?.nombre ||
       item.user?.nombre ||
       item.usuarioNombre ||
       'Usuario desconocido',
     zona:
+      item.nombreZona ||
       item.zona?.nombre ||
       item.zone?.nombre ||
       item.zonaNombre ||
       'Zona no asignada',
-    tiempo: formatTime(item.fechaCreacion || item.createdAt || item.timestamp),
+    tiempo: formatTime(
+      item.fechaHora ||
+        item.fechaCreacion ||
+        item.createdAt ||
+        item.timestamp
+    ),
     estado: item.estado || 'En espera',
     tipo: item.tipo || 'Pánico',
   };
 }
 
 export default function AlertListScreen({ navigation }: any) {
+  const { guard } = useAuth();
+
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAlerts = async () => {
-    try {
-      const data = await apiFetch<any>('/Alerts');
+    const fetchAlerts = useCallback(async () => {
+      try {
+        const data = await apiFetch<any>('/Alerts');
 
-      const alertsArray = extractItems<any>(data);
+        const alertsArray = extractItems<any>(data);
 
-      const mappedAlerts: AlertItem[] = alertsArray.map(mapAlertFromApi);
+        const mappedAlerts: AlertItem[] = alertsArray.map(mapAlertFromApi);
 
-      setAlerts(mappedAlerts);
-    } catch (error) {
-      console.error('Error cargando alertas:', error);
-      setAlerts([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+        setAlerts(mappedAlerts);
+      } catch (error) {
+        console.error('Error cargando alertas:', error);
+        setAlerts([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }, []);
 
-  useEffect(() => {
-    fetchAlerts();
-  }, []);
+      const handleAlertCreated = useCallback((newAlert: SignalRAlert) => {
+        const mappedAlert = mapAlertFromApi(newAlert);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchAlerts();
-  }, []);
+        setAlerts((prevAlerts) => {
+          const alreadyExists = prevAlerts.some(
+            (item) => String(item.id) === String(mappedAlert.id)
+          );
+
+          if (alreadyExists) {
+           return prevAlerts;
+          }
+
+          return [mappedAlert, ...prevAlerts];
+        });
+      }, []);
+
+      const handleAlertUpdated = useCallback(
+        (event: NormalizedAlertStatusEvent) => {
+          if (!event.alertId) return;
+
+          setAlerts((prevAlerts) =>
+            prevAlerts.map((item) =>
+              String(item.id) === String(event.alertId)
+                ? {
+                    ...item,
+                    estado: event.estado || item.estado,
+                  }
+                : item
+            )
+          );
+        },
+        []
+      );
+
+      const handleAlertRemoved = useCallback((alertId: number | string) => {
+        setAlerts((prevAlerts) =>
+          prevAlerts.filter((item) => String(item.id) !== String(alertId))
+        );
+      }, []);
+
+    useSignalR({
+      zonaId: guard?.zonaId,
+      onAlertCreated: handleAlertCreated,
+      onAlertUpdated: handleAlertUpdated,
+      onAlertRemoved: handleAlertRemoved,
+      onReconnect: fetchAlerts,
+    });
+
+    useEffect(() => {
+      fetchAlerts();
+    }, [fetchAlerts]);
+
+    const onRefresh = useCallback(() => {
+      setRefreshing(true);
+      fetchAlerts();
+    }, [fetchAlerts]);
 
   const renderAlertCard = ({ item }: { item: AlertItem }) => (
     <TouchableOpacity
