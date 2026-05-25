@@ -175,6 +175,76 @@ namespace Alerts.Service.Controllers
             return Ok(alert);
         }
 
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // GET api/alerts/guard/{guardiaId}/history?date=today
+        // ═══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Lista las alertas atendidas por un guardia en una fecha específica.
+        /// Usado por la Guard App para mostrar el historial del turno.
+        /// </summary>
+        [HttpGet("guard/{guardiaId:int}/history")]
+        public async Task<IActionResult> GetGuardHistory(
+            int guardiaId,
+            [FromQuery] string? date = "today")
+        {
+            DateTime fechaConsulta;
+
+            if (string.Equals(date, "today", StringComparison.OrdinalIgnoreCase))
+            {
+                fechaConsulta = DateTime.UtcNow.Date;
+            }
+            else if (!DateTime.TryParse(date, out fechaConsulta))
+           {
+                return BadRequest(new
+                {
+                    mensaje = "Formato de fecha inválido. Use date=today o una fecha válida como 2026-05-25."
+             });
+            }
+
+            var fechaInicio = fechaConsulta.Date;
+            var fechaFin = fechaInicio.AddDays(1);
+
+            var alerts = await _context.Alerts
+                .Where(a =>
+                    a.GuardiaAsignadoId == guardiaId &&
+                    a.FechaHora >= fechaInicio &&
+                    a.FechaHora < fechaFin)
+                .OrderByDescending(a => a.FechaHora)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.UsuarioId,
+                    a.NombreUsuario,
+                    a.CorreoUsuario,
+                    a.Facultad,
+                    a.ZonaId,
+                    a.NombreZona,
+                    a.ColorZona,
+                    a.Lat,
+                    a.Lng,
+                    a.Estado,
+                    a.FechaHora,
+                    a.FechaAsumida,
+                    a.FechaEnCamino,
+                    a.FechaResuelta,
+                    a.FechaCerrada,
+                    a.GuardiaAsignadoId,
+                    a.GuardiaAsignadoNombre,
+
+                    TiempoRespuestaMinutos =
+                        a.FechaCerrada.HasValue
+                            ? Math.Round((a.FechaCerrada.Value - a.FechaHora).TotalMinutes, 2)
+                            : a.FechaResuelta.HasValue
+                               ? Math.Round((a.FechaResuelta.Value - a.FechaHora).TotalMinutes, 2)
+                               : (double?)null
+                })
+                .ToListAsync();
+
+            return Ok(alerts);
+        }
+
         // ═══════════════════════════════════════════════════════════════════════
         // HU-09: Flujo de estados de alerta
         // ═══════════════════════════════════════════════════════════════════════
