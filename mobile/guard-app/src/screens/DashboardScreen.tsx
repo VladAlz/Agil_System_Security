@@ -27,6 +27,7 @@ import {
   LogOut,
   ShieldCheck,
   ClipboardList,
+  History,
 } from 'lucide-react-native';
 
 import { LeafletMap } from '../components/LeafletMap';
@@ -305,6 +306,14 @@ export default function DashboardScreen({ navigation }: any) {
             >
               <ClipboardList size={16} color="#f8fafc" />
               <Text style={styles.mapButtonText}>Reporte</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.historyButton}
+              onPress={() => navigation.navigate('AlertHistory')}
+            >
+              <History size={16} color="#f8fafc" />
+              <Text style={styles.mapButtonText}>Historial</Text>
             </TouchableOpacity>
 
             <View style={styles.miniStat}>
@@ -621,4 +630,15 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
   },
+
+  historyButton: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+
 });

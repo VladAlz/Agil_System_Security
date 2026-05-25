@@ -10,6 +10,7 @@ import AlertDetailScreen from './src/screens/AlertDetailScreen';
 import AlertListScreen from './src/screens/AlertListScreen';
 import MapScreen from './src/screens/MapScreen';
 import ReportScreen from './src/screens/ReportScreen';
+import AlertHistoryScreen from './src/screens/AlertHistoryScreen';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 
@@ -20,6 +21,7 @@ export type GuardStackParamList = {
   AlertDetail: { alertId: string };
   Map: undefined;
   Report: undefined;
+  AlertHistory: undefined;
 };
 
 const Stack = createNativeStackNavigator<GuardStackParamList>();
@@ -56,6 +58,7 @@ function AppNavigator() {
             <Stack.Screen name="AlertDetail" component={AlertDetailScreen} />
             <Stack.Screen name="Map" component={MapScreen} />
             <Stack.Screen name="Report" component={ReportScreen} />
+            <Stack.Screen name="AlertHistory" component={AlertHistoryScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />
