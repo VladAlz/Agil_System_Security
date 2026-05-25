@@ -197,11 +197,24 @@ namespace Alerts.Service.Controllers
 
             // Validar transición: solo desde "Activa"
             if (alert.Estado != "Activa")
+            {
+                if (alert.Estado == "Asumida" && alert.GuardiaAsignadoId.HasValue)
+                {
+                    return Conflict(new
+                    {
+                        mensaje = "Este caso ya fue asumido por otro guardia.",
+                        guardiaAsignadoId = alert.GuardiaAsignadoId.Value,
+                        guardiaAsignadoNombre = alert.GuardiaAsignadoNombre,
+                        estadoActual = alert.Estado
+                   });
+                }
+
                 return BadRequest(new
                 {
                     mensaje = $"No se puede asumir una alerta en estado '{alert.Estado}'. Debe estar 'Activa'.",
                     estadoActual = alert.Estado
                 });
+            }
 
             // Concurrencia: ¿ya fue asignada a otro guardia?
             if (alert.GuardiaAsignadoId.HasValue && alert.GuardiaAsignadoId.Value != dto.GuardiaId)
@@ -219,10 +232,33 @@ namespace Alerts.Service.Controllers
             // Validar que el guardia existe en Campus.Service
             var http = _httpFactory.CreateClient();
             var campusBase = _config["Services:CampusService"];
-            var guardResp = await http.GetAsync($"{campusBase}/api/guards/{dto.GuardiaId}");
+
+            var guardRequest = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"{campusBase}/api/guards/{dto.GuardiaId}"
+            );
+
+            if (Request.Headers.ContainsKey("Authorization"))
+            {
+                guardRequest.Headers.TryAddWithoutValidation(
+                    "Authorization",
+                    Request.Headers["Authorization"].ToString()
+                );
+            }
+
+            var guardResp = await http.SendAsync(guardRequest);
 
             if (!guardResp.IsSuccessStatusCode)
-                return BadRequest(new { mensaje = $"Guardia con Id={dto.GuardiaId} no encontrado en Campus.Service" });
+            {
+                var errorBody = await guardResp.Content.ReadAsStringAsync();
+
+                return BadRequest(new
+                {
+                    mensaje = $"Guardia con Id={dto.GuardiaId} no encontrado en Campus.Service",
+                    statusCampus = (int)guardResp.StatusCode,
+                    detalleCampus = errorBody
+                });
+            }
 
             var guardData = await guardResp.Content.ReadFromJsonAsync<GuardResponseDto>();
 
