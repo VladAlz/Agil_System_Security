@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert as NativeAlert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -8,6 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import { ApiError } from '../services/apiClient';
 
 import {
   AlertTriangle,
@@ -75,11 +78,45 @@ export default function AlertDetailScreen({ route, navigation }: any) {
     setUpdatingStatus(true);
 
     try {
-      // Asumir la alerta (Activa → Asumida)
       const assumedAlert = await alertService.assumeAlert(alert.id, guard.guardId);
       setAlert(assumedAlert);
+
+      NativeAlert.alert(
+        'Caso asumido',
+        'Has asumido correctamente esta alerta.'
+      );
     } catch (err: any) {
-      alertMessage(err.message || 'No se pudo asumir el caso');
+      console.error('Error asumiendo alerta:', err);
+
+      const isAlreadyAssumedError =
+        err instanceof ApiError &&
+        (err.status === 409 ||
+          (err.status === 400 &&
+            typeof err.message === 'string' &&
+            err.message.includes('No se puede asumir una alerta')));
+
+      if (isAlreadyAssumedError) {
+        setAlert((prevAlert) =>
+          prevAlert
+            ? {
+                ...prevAlert,
+                estado: 'Asumida',
+              }
+            : prevAlert
+        );
+
+        NativeAlert.alert(
+          'Caso ya asumido',
+          'Este caso ya fue asumido por otro guardia.'
+        );
+
+        return;
+      }
+
+      NativeAlert.alert(
+        'Error',
+        err.message || 'No se pudo asumir el caso. Intenta nuevamente.'
+      );
     } finally {
       setUpdatingStatus(false);
     }
@@ -135,9 +172,7 @@ export default function AlertDetailScreen({ route, navigation }: any) {
   };
 
   const alertMessage = (message: string) => {
-    if (typeof window !== 'undefined') {
-      window.alert(message);
-    }
+    NativeAlert.alert('Aviso', message);
   };
 
   if (loading) {
@@ -326,6 +361,14 @@ export default function AlertDetailScreen({ route, navigation }: any) {
                   </>
                 )}
               </TouchableOpacity>
+            )}
+
+            {currentStatus === 'Asumida' && (
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>
+                  Esta alerta ya fue asumida. Continúa con el estado “Ir en Camino” si el caso está asignado a tu guardia.
+               </Text>
+              </View>
             )}
 
             {currentStatus === 'En Camino' && (
@@ -627,4 +670,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '900',
   },
+
+  infoBox: {
+    marginTop: 4,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#78350f',
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+  },
+
+  infoText: {
+    color: '#fef3c7',
+    fontSize: 13,
+    textAlign: 'center',
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+
+
+
 });

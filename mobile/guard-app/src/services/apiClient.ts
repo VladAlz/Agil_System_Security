@@ -1,6 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../../config/api';
 
+export class ApiError extends Error {
+  status: number;
+  data: any;
+
+  constructor(message: string, status: number, data?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
+  }
+}
+
+
 const TOKEN_KEY = 'guard_token';
 
 type RequestOptions = RequestInit & {
@@ -57,9 +70,10 @@ export async function apiFetch<T>(
       data?.mensaje ||
       data?.message ||
       data?.title ||
+      data?.error ||
       'Ocurrió un error al comunicarse con el servidor';
 
-    throw new Error(message);
+    throw new ApiError(message, response.status, data);
   }
 
   return data as T;
