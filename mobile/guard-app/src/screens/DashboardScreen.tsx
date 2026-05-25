@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { guardService } from '../services/guardService';
 import { SignalRAlert, useSignalR } from '../hooks/useSignalR';
-import { apiFetch } from '../services/apiClient';
+import { apiFetch, extractItems } from '../services/apiClient';
 
 import {
   FlatList,
@@ -103,12 +103,15 @@ export default function DashboardScreen({ navigation }: any) {
     try {
       const data = await apiFetch<any>('/Alerts');
 
-      const mappedData: Alert[] = data.map((bAlert: any) => ({
-        id: bAlert.id.toString(),
-        // Nuevo modelo desnormalizado: nombreUsuario y nombreZona vienen directamente
+      const alertsArray = extractItems<any>(data);
+
+      const mappedData: Alert[] = alertsArray.map((bAlert: any) => ({
+        id: String(bAlert.id ?? ''),
         user: bAlert.nombreUsuario || bAlert.usuario?.nombre || 'Desconocido',
         location: bAlert.nombreZona || bAlert.zona?.nombre || 'Ubicación desconocida',
-        time: new Date(bAlert.fechaHora).toLocaleTimeString(),
+        time: bAlert.fechaHora
+          ? new Date(bAlert.fechaHora).toLocaleTimeString()
+          : 'Sin hora',
         type: 'Pánico',
         severity: 'High',
         coords: { x: 50, y: 50 },

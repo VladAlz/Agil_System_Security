@@ -19,7 +19,7 @@ import {
   UserRound,
 } from 'lucide-react-native';
 
-import { apiFetch } from '../services/apiClient';
+import { apiFetch, extractItems } from '../services/apiClient';
 
 
 type AlertItem = {
@@ -74,9 +74,9 @@ export default function AlertListScreen({ navigation }: any) {
     try {
       const data = await apiFetch<any>('/Alerts');
 
-      const mappedAlerts: AlertItem[] = Array.isArray(data)
-        ? data.map(mapAlertFromApi)
-        : [];
+      const alertsArray = extractItems<any>(data);
+
+      const mappedAlerts: AlertItem[] = alertsArray.map(mapAlertFromApi);
 
       setAlerts(mappedAlerts);
     } catch (error) {
