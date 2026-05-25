@@ -19,12 +19,8 @@ import {
   UserRound,
 } from 'lucide-react-native';
 
-const IS_WEB =
-  typeof window !== 'undefined' && window.location.hostname === 'localhost';
+import { apiFetch } from '../services/apiClient';
 
-const API_URL = IS_WEB
-  ? 'http://localhost:5233/api'
-  : 'http://10.0.2.2:5233/api';
 
 type AlertItem = {
   id: string;
@@ -76,13 +72,7 @@ export default function AlertListScreen({ navigation }: any) {
 
   const fetchAlerts = async () => {
     try {
-      const response = await fetch(`${API_URL}/Alerts`);
-
-      if (!response.ok) {
-        throw new Error('No se pudieron cargar las alertas');
-      }
-
-      const data = await response.json();
+      const data = await apiFetch<any>('/Alerts');
 
       const mappedAlerts: AlertItem[] = Array.isArray(data)
         ? data.map(mapAlertFromApi)

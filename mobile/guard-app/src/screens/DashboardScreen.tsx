@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { guardService } from '../services/guardService';
 import { SignalRAlert, useSignalR } from '../hooks/useSignalR';
-import { API_URL } from '../../config/api';
+import { apiFetch } from '../services/apiClient';
 
 import {
   FlatList,
@@ -101,8 +101,7 @@ export default function DashboardScreen({ navigation }: any) {
 
   const fetchAlerts = async () => {
     try {
-      const response = await fetch(`${API_URL}/Alerts`);
-      const data = await response.json();
+      const data = await apiFetch<any>('/Alerts');
 
       const mappedData: Alert[] = data.map((bAlert: any) => ({
         id: bAlert.id.toString(),

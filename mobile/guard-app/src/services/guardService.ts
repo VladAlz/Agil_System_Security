@@ -1,4 +1,4 @@
-import { API_URL } from '../../config/api';
+import { apiFetch } from './apiClient';
 
 export type GuardStatusResponse = {
   id: number;
@@ -23,22 +23,11 @@ export const guardService = {
     guardId: number,
     nuevoEstado: string
   ): Promise<GuardStatusResponse> {
-    const response = await fetch(`${API_URL}/Guards/${guardId}/status`, {
+    return apiFetch<GuardStatusResponse>(`/Guards/${guardId}/status`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify({
         estado: nuevoEstado,
       }),
     });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data?.mensaje || 'No se pudo actualizar el estado');
-    }
-
-    return data;
   },
 };
