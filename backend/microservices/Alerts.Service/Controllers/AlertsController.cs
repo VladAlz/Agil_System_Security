@@ -31,6 +31,20 @@ namespace Alerts.Service.Controllers
             _config      = config;
         }
 
+
+        private static DateTime GetEcuadorNow()
+        {
+            try
+            {
+                var ecuadorTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ecuadorTimeZone);
+            }
+            catch
+            {
+                return DateTime.Now;
+            }
+        }
+
         // ═══════════════════════════════════════════════════════════════════════
         // POST api/alerts
         // ═══════════════════════════════════════════════════════════════════════
@@ -77,7 +91,7 @@ namespace Alerts.Service.Controllers
                 Lat          = dto.Lat,
                 Lng          = dto.Lng,
                 Estado       = "Activa",
-                FechaHora    = DateTime.UtcNow,
+                FechaHora     = GetEcuadorNow(),
                 NombreUsuario = userDto.Nombre,
                 NombreZona    = zonaNombre,
                 ColorZona     = zonaColor,
@@ -193,7 +207,7 @@ namespace Alerts.Service.Controllers
 
             if (string.Equals(date, "today", StringComparison.OrdinalIgnoreCase))
             {
-                fechaConsulta = DateTime.UtcNow.Date;
+                fechaConsulta = GetEcuadorNow().Date;
             }
             else if (!DateTime.TryParse(date, out fechaConsulta))
            {
@@ -226,7 +240,7 @@ namespace Alerts.Service.Controllers
                             a.FechaAsumida.Value >= fechaInicio &&
                             a.FechaAsumida.Value < fechaFin)
                     ))
-                .OrderByDescending(a => a.FechaHora)
+                .OrderByDescending(a => a.Id)
                 .Select(a => new
                 {
                     a.Id,
@@ -249,11 +263,11 @@ namespace Alerts.Service.Controllers
                     a.GuardiaAsignadoNombre,
 
                     TiempoRespuestaMinutos =
-                        a.FechaCerrada.HasValue
-                            ? Math.Round((a.FechaCerrada.Value - a.FechaHora).TotalMinutes, 2)
-                            : a.FechaResuelta.HasValue
-                               ? Math.Round((a.FechaResuelta.Value - a.FechaHora).TotalMinutes, 2)
-                               : (double?)null
+                             a.FechaAsumida.HasValue && a.FechaCerrada.HasValue
+                                 ? Math.Round((a.FechaCerrada.Value - a.FechaAsumida.Value).TotalMinutes, 2)
+                                 : a.FechaAsumida.HasValue && a.FechaResuelta.HasValue
+                                     ? Math.Round((a.FechaResuelta.Value - a.FechaAsumida.Value).TotalMinutes, 2)
+                                     : (double?)null
                 })
                 .ToListAsync();
 
@@ -351,7 +365,7 @@ namespace Alerts.Service.Controllers
             alert.GuardiaAsignadoId = dto.GuardiaId;
             alert.GuardiaAsignadoNombre = guardData?.NombreGuardia ?? "Guardia desconocido";
             alert.Estado = "Asumida";
-            alert.FechaAsumida = DateTime.UtcNow;
+            alert.FechaAsumida = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 
@@ -397,7 +411,7 @@ namespace Alerts.Service.Controllers
                 return BadRequest(new { mensaje = "La alerta no tiene un guardia asignado." });
 
             alert.Estado = "En Camino";
-            alert.FechaEnCamino = DateTime.UtcNow;
+            alert.FechaEnCamino = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 
@@ -438,7 +452,7 @@ namespace Alerts.Service.Controllers
                 });
 
             alert.Estado = "Resuelta";
-            alert.FechaResuelta = DateTime.UtcNow;
+            alert.FechaResuelta = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 
@@ -477,7 +491,7 @@ namespace Alerts.Service.Controllers
                 });
 
             alert.Estado = "Cerrada";
-            alert.FechaCerrada = DateTime.UtcNow;
+            alert.FechaCerrada = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 
