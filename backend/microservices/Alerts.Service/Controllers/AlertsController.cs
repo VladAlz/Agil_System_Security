@@ -209,8 +209,23 @@ namespace Alerts.Service.Controllers
             var alerts = await _context.Alerts
                 .Where(a =>
                     a.GuardiaAsignadoId == guardiaId &&
-                    a.FechaHora >= fechaInicio &&
-                    a.FechaHora < fechaFin)
+                    (
+                        a.Estado == "Resuelta" ||
+                        a.Estado == "Cerrada"
+                    ) &&
+                   (
+                        (a.FechaCerrada.HasValue &&
+                            a.FechaCerrada.Value >= fechaInicio &&
+                            a.FechaCerrada.Value < fechaFin)
+                        ||
+                        (a.FechaResuelta.HasValue &&
+                            a.FechaResuelta.Value >= fechaInicio &&
+                            a.FechaResuelta.Value < fechaFin)
+                        ||
+                        (a.FechaAsumida.HasValue &&
+                            a.FechaAsumida.Value >= fechaInicio &&
+                            a.FechaAsumida.Value < fechaFin)
+                    ))
                 .OrderByDescending(a => a.FechaHora)
                 .Select(a => new
                 {

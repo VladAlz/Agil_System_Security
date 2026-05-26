@@ -33,7 +33,9 @@ export type CloseShiftReportPayload = {
 
 export const reportService = {
   async getReportsByGuard(guardiaId: number): Promise<ShiftReport[]> {
-    return apiFetch<ShiftReport[]>(`/reports?guardiaId=${guardiaId}`);
+    return apiFetch<ShiftReport[]>(
+      `/reports?guardiaId=${guardiaId}&_t=${Date.now()}`
+    );
   },
 
   async getActiveReport(guardiaId: number): Promise<ShiftReport | null> {

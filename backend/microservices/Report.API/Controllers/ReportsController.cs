@@ -26,6 +26,19 @@ namespace Report.API.Controllers
             _context = context;
         }
 
+        private static DateTime GetEcuadorNow()
+        {
+            try
+            {
+                var ecuadorTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ecuadorTimeZone);
+            }
+            catch
+            {
+                return DateTime.Now;
+            }
+        }
+
         // ───────────────────────────────────────────────────────────────────
         // POST api/reports — Crear / abrir un turno de guardia
         // ───────────────────────────────────────────────────────────────────
@@ -54,7 +67,7 @@ namespace Report.API.Controllers
                 ZonaId        = dto.ZonaId,
                 NombreZona    = dto.NombreZona,
                 Observaciones = dto.Observaciones,
-                InicioTurno   = DateTime.UtcNow,
+                InicioTurno   = GetEcuadorNow(),
                 Estado        = "Activo"
             };
 
@@ -95,7 +108,7 @@ namespace Report.API.Controllers
                 query = query.Where(r => r.InicioTurno <= hasta.AddDays(1));
 
             var reportes = await query
-                .OrderByDescending(r => r.InicioTurno)
+                .OrderByDescending(r => r.Id)
                 .ToListAsync();
 
             return Ok(reportes);
@@ -136,7 +149,7 @@ namespace Report.API.Controllers
                     mensaje = $"No se puede cerrar un turno en estado '{reporte.Estado}'. Debe estar 'Activo'."
                 });
 
-            reporte.FinTurno                  = DateTime.UtcNow;
+            reporte.FinTurno                  = GetEcuadorNow();
             reporte.AlertasAtendidas          = dto.AlertasAtendidas;
             reporte.AlertasResueltas          = dto.AlertasResueltas;
             reporte.TiempoRespuestaPromedio   = dto.TiempoRespuestaPromedio;

@@ -91,7 +91,11 @@ export default function AlertListScreen({ navigation }: any) {
 
         const alertsArray = extractItems<any>(data);
 
-        const mappedAlerts: AlertItem[] = alertsArray.map(mapAlertFromApi);
+        const activeAlerts = alertsArray.filter((item: any) =>
+          ['Activa', 'Asumida', 'En Camino'].includes(item.estado)
+        );
+
+        const mappedAlerts: AlertItem[] = activeAlerts.map(mapAlertFromApi);
 
         setAlerts(mappedAlerts);
       } catch (error) {
@@ -123,19 +127,32 @@ export default function AlertListScreen({ navigation }: any) {
         (event: NormalizedAlertStatusEvent) => {
           if (!event.alertId) return;
 
-          setAlerts((prevAlerts) =>
-            prevAlerts.map((item) =>
-              String(item.id) === String(event.alertId)
-                ? {
-                    ...item,
-                    estado: event.estado || item.estado,
-                  }
-                : item
-            )
-          );
-        },
-        []
-      );
+          if (
+            event.estado === 'Resuelta' ||
+            event.estado === 'Cerrada' ||
+            event.estado === 'Cancelada'
+          ) {
+            setAlerts((prevAlerts) =>
+              prevAlerts.filter(
+                (item) => String(item.id) !== String(event.alertId)
+              )
+            );
+            return;
+          }
+
+    setAlerts((prevAlerts) =>
+      prevAlerts.map((item) =>
+        String(item.id) === String(event.alertId)
+          ? {
+              ...item,
+              estado: event.estado || item.estado,
+            }
+          : item
+      )
+    );
+  },
+  []
+);
 
       const handleAlertRemoved = useCallback((alertId: number | string) => {
         setAlerts((prevAlerts) =>

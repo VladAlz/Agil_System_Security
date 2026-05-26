@@ -85,7 +85,11 @@ export default function DashboardScreen({ navigation }: any) {
 
       const alertsArray = extractItems<any>(data);
 
-      const mappedData: Alert[] = alertsArray.map(mapAlertFromApi);
+      const activeAlerts = alertsArray.filter((item: any) =>
+        ['Activa', 'Asumida', 'En Camino'].includes(item.estado)
+      );
+
+      const mappedData: Alert[] = activeAlerts.map(mapAlertFromApi);
 
       setAlerts(mappedData);
     } catch (error) {
@@ -120,6 +124,19 @@ export default function DashboardScreen({ navigation }: any) {
   const handleAlertUpdated = useCallback(
     (event: NormalizedAlertStatusEvent) => {
       if (!event.alertId) return;
+
+      if (
+        event.estado === 'Resuelta' ||
+        event.estado === 'Cerrada' ||
+        event.estado === 'Cancelada'
+      ) {
+        setAlerts((prevAlerts) =>
+          prevAlerts.filter(
+            (item) => String(item.id) !== String(event.alertId)
+          )
+        );
+        return;
+      }
 
       setAlerts((prevAlerts) =>
         prevAlerts.map((item) =>

@@ -56,10 +56,13 @@ export default function ReportScreen({ navigation }: any) {
 
     try {
       const data = await reportService.getReportsByGuard(guardiaId);
-      setReports(data);
+
+      const sortedReports = [...data].sort((a, b) => b.id - a.id);
+
+      setReports(sortedReports);
 
       const active =
-        data.find((report) => report.estado?.toLowerCase() === 'activo') ??
+        sortedReports.find((report) => report.estado?.toLowerCase() === 'activo') ??
         null;
 
       setActiveReport(active);
@@ -87,7 +90,7 @@ export default function ReportScreen({ navigation }: any) {
     setSaving(true);
 
     try {
-      const created = await reportService.createReport({
+      await reportService.createReport({
         guardiaId,
         nombreGuardia,
         zonaId,
@@ -95,9 +98,9 @@ export default function ReportScreen({ navigation }: any) {
         observaciones: observacionesInicio.trim(),
       });
 
-      setActiveReport(created);
-      setReports((prev) => [created, ...prev]);
       setObservacionesInicio('');
+
+      await loadReports();
 
       Alert.alert('Turno abierto', 'El turno se abrió correctamente.');
     } catch (error: any) {
@@ -158,19 +161,18 @@ export default function ReportScreen({ navigation }: any) {
     setSaving(true);
 
     try {
-      const closed = await reportService.closeReport(activeReport.id, payload);
+      await reportService.closeReport(activeReport.id, payload);
 
       setActiveReport(null);
-      setReports((prev) =>
-        prev.map((report) => (report.id === closed.id ? closed : report))
-      );
 
       setAlertasAtendidas('');
       setAlertasResueltas('');
       setTiempoPromedio('');
       setObservacionesCierre('');
 
-      Alert.alert('Turno cerrado', 'El reporte del turno fue enviado.');
+      await loadReports();
+
+      Alert.alert('Turno cerrado', 'El reporte del turno fue enviado.'); 
     } catch (error: any) {
       console.error('Error cerrando reporte:', error);
       Alert.alert(
