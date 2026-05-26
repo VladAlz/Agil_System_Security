@@ -31,6 +31,20 @@ namespace Alerts.Service.Controllers
             _config      = config;
         }
 
+
+        private static DateTime GetEcuadorNow()
+        {
+            try
+            {
+                var ecuadorTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SA Pacific Standard Time");
+                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ecuadorTimeZone);
+            }
+            catch
+            {
+                return DateTime.Now;
+            }
+        }
+
         // ═══════════════════════════════════════════════════════════════════════
         // POST api/alerts
         // ═══════════════════════════════════════════════════════════════════════
@@ -77,7 +91,7 @@ namespace Alerts.Service.Controllers
                 Lat          = dto.Lat,
                 Lng          = dto.Lng,
                 Estado       = "Activa",
-                FechaHora    = DateTime.UtcNow,
+                FechaHora     = GetEcuadorNow(),
                 NombreUsuario = userDto.Nombre,
                 NombreZona    = zonaNombre,
                 ColorZona     = zonaColor,
@@ -175,6 +189,91 @@ namespace Alerts.Service.Controllers
             return Ok(alert);
         }
 
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // GET api/alerts/guard/{guardiaId}/history?date=today
+        // ═══════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Lista las alertas atendidas por un guardia en una fecha específica.
+        /// Usado por la Guard App para mostrar el historial del turno.
+        /// </summary>
+        [HttpGet("guard/{guardiaId:int}/history")]
+        public async Task<IActionResult> GetGuardHistory(
+            int guardiaId,
+            [FromQuery] string? date = "today")
+        {
+            DateTime fechaConsulta;
+
+            if (string.Equals(date, "today", StringComparison.OrdinalIgnoreCase))
+            {
+                fechaConsulta = GetEcuadorNow().Date;
+            }
+            else if (!DateTime.TryParse(date, out fechaConsulta))
+           {
+                return BadRequest(new
+                {
+                    mensaje = "Formato de fecha inválido. Use date=today o una fecha válida como 2026-05-25."
+             });
+            }
+
+            var fechaInicio = fechaConsulta.Date;
+            var fechaFin = fechaInicio.AddDays(1);
+
+            var alerts = await _context.Alerts
+                .Where(a =>
+                    a.GuardiaAsignadoId == guardiaId &&
+                    (
+                        a.Estado == "Resuelta" ||
+                        a.Estado == "Cerrada"
+                    ) &&
+                   (
+                        (a.FechaCerrada.HasValue &&
+                            a.FechaCerrada.Value >= fechaInicio &&
+                            a.FechaCerrada.Value < fechaFin)
+                        ||
+                        (a.FechaResuelta.HasValue &&
+                            a.FechaResuelta.Value >= fechaInicio &&
+                            a.FechaResuelta.Value < fechaFin)
+                        ||
+                        (a.FechaAsumida.HasValue &&
+                            a.FechaAsumida.Value >= fechaInicio &&
+                            a.FechaAsumida.Value < fechaFin)
+                    ))
+                .OrderByDescending(a => a.Id)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.UsuarioId,
+                    a.NombreUsuario,
+                    a.CorreoUsuario,
+                    a.Facultad,
+                    a.ZonaId,
+                    a.NombreZona,
+                    a.ColorZona,
+                    a.Lat,
+                    a.Lng,
+                    a.Estado,
+                    a.FechaHora,
+                    a.FechaAsumida,
+                    a.FechaEnCamino,
+                    a.FechaResuelta,
+                    a.FechaCerrada,
+                    a.GuardiaAsignadoId,
+                    a.GuardiaAsignadoNombre,
+
+                    TiempoRespuestaMinutos =
+                             a.FechaAsumida.HasValue && a.FechaCerrada.HasValue
+                                 ? Math.Round((a.FechaCerrada.Value - a.FechaAsumida.Value).TotalMinutes, 2)
+                                 : a.FechaAsumida.HasValue && a.FechaResuelta.HasValue
+                                     ? Math.Round((a.FechaResuelta.Value - a.FechaAsumida.Value).TotalMinutes, 2)
+                                     : (double?)null
+                })
+                .ToListAsync();
+
+            return Ok(alerts);
+        }
+
         // ═══════════════════════════════════════════════════════════════════════
         // HU-09: Flujo de estados de alerta
         // ═══════════════════════════════════════════════════════════════════════
@@ -197,11 +296,24 @@ namespace Alerts.Service.Controllers
 
             // Validar transición: solo desde "Activa"
             if (alert.Estado != "Activa")
+            {
+                if (alert.Estado == "Asumida" && alert.GuardiaAsignadoId.HasValue)
+                {
+                    return Conflict(new
+                    {
+                        mensaje = "Este caso ya fue asumido por otro guardia.",
+                        guardiaAsignadoId = alert.GuardiaAsignadoId.Value,
+                        guardiaAsignadoNombre = alert.GuardiaAsignadoNombre,
+                        estadoActual = alert.Estado
+                   });
+                }
+
                 return BadRequest(new
                 {
                     mensaje = $"No se puede asumir una alerta en estado '{alert.Estado}'. Debe estar 'Activa'.",
                     estadoActual = alert.Estado
                 });
+            }
 
             // Concurrencia: ¿ya fue asignada a otro guardia?
             if (alert.GuardiaAsignadoId.HasValue && alert.GuardiaAsignadoId.Value != dto.GuardiaId)
@@ -219,10 +331,33 @@ namespace Alerts.Service.Controllers
             // Validar que el guardia existe en Campus.Service
             var http = _httpFactory.CreateClient();
             var campusBase = _config["Services:CampusService"];
-            var guardResp = await http.GetAsync($"{campusBase}/api/guards/{dto.GuardiaId}");
+
+            var guardRequest = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"{campusBase}/api/guards/{dto.GuardiaId}"
+            );
+
+            if (Request.Headers.ContainsKey("Authorization"))
+            {
+                guardRequest.Headers.TryAddWithoutValidation(
+                    "Authorization",
+                    Request.Headers["Authorization"].ToString()
+                );
+            }
+
+            var guardResp = await http.SendAsync(guardRequest);
 
             if (!guardResp.IsSuccessStatusCode)
-                return BadRequest(new { mensaje = $"Guardia con Id={dto.GuardiaId} no encontrado en Campus.Service" });
+            {
+                var errorBody = await guardResp.Content.ReadAsStringAsync();
+
+                return BadRequest(new
+                {
+                    mensaje = $"Guardia con Id={dto.GuardiaId} no encontrado en Campus.Service",
+                    statusCampus = (int)guardResp.StatusCode,
+                    detalleCampus = errorBody
+                });
+            }
 
             var guardData = await guardResp.Content.ReadFromJsonAsync<GuardResponseDto>();
 
@@ -230,7 +365,7 @@ namespace Alerts.Service.Controllers
             alert.GuardiaAsignadoId = dto.GuardiaId;
             alert.GuardiaAsignadoNombre = guardData?.NombreGuardia ?? "Guardia desconocido";
             alert.Estado = "Asumida";
-            alert.FechaAsumida = DateTime.UtcNow;
+            alert.FechaAsumida = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 
@@ -276,7 +411,7 @@ namespace Alerts.Service.Controllers
                 return BadRequest(new { mensaje = "La alerta no tiene un guardia asignado." });
 
             alert.Estado = "En Camino";
-            alert.FechaEnCamino = DateTime.UtcNow;
+            alert.FechaEnCamino = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 
@@ -317,7 +452,7 @@ namespace Alerts.Service.Controllers
                 });
 
             alert.Estado = "Resuelta";
-            alert.FechaResuelta = DateTime.UtcNow;
+            alert.FechaResuelta = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 
@@ -356,7 +491,7 @@ namespace Alerts.Service.Controllers
                 });
 
             alert.Estado = "Cerrada";
-            alert.FechaCerrada = DateTime.UtcNow;
+            alert.FechaCerrada = GetEcuadorNow();
 
             await _context.SaveChangesAsync();
 

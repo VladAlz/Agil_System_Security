@@ -2,33 +2,84 @@ import { useEffect, useRef, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { HUB_URL } from '../../config/api';
 
-
 export type SignalRAlert = {
   id: number | string;
+  usuarioId?: number;
+  zonaId?: number;
+  nombreUsuario?: string;
+  nombreZona?: string;
+  colorZona?: string;
+  facultad?: string;
+  correoUsuario?: string;
+  lat?: number;
+  lng?: number;
+  latitud?: number;
+  longitud?: number;
+  estado?: string;
+  fechaHora?: string;
+  fechaCreacion?: string;
   usuario?: {
     id?: number;
     nombre?: string;
     correo?: string;
+    facultad?: string;
   };
   zona?: {
     id?: number;
     nombre?: string;
     color?: string;
   };
-  latitud?: number;
-  longitud?: number;
+};
+
+export type AlertStatusEvent = {
+  alertId?: number | string;
+  id?: number | string;
   estado?: string;
-  fechaCreacion?: string;
+  status?: string;
+  guardId?: number;
+  guardiaId?: number;
+  guardName?: string;
+  guardiaNombre?: string;
+  message?: string;
+};
+
+export type NormalizedAlertStatusEvent = {
+  alertId?: number | string;
+  estado?: string;
+  guardId?: number;
+  guardName?: string;
+  message?: string;
 };
 
 type UseSignalRProps = {
   zonaId?: number | null;
-  onAlertCreated: (alert: SignalRAlert) => void;
+  onAlertCreated?: (alert: SignalRAlert) => void;
+  onAlertUpdated?: (event: NormalizedAlertStatusEvent) => void;
+  onAlertRemoved?: (alertId: number | string) => void;
+  onReconnect?: () => void;
 };
 
 export type SignalRStatus = 'connected' | 'reconnecting' | 'disconnected';
 
-export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
+function normalizeAlertEvent(
+  payload: AlertStatusEvent
+): NormalizedAlertStatusEvent {
+  return {
+    alertId: payload.alertId ?? payload.id,
+    estado: payload.estado ?? payload.status,
+    guardId: payload.guardId ?? payload.guardiaId,
+    guardName: payload.guardName ?? payload.guardiaNombre,
+    message: payload.message,
+  };
+}
+
+export function useSignalR({
+  zonaId,
+  onAlertCreated,
+  onAlertUpdated,
+  onAlertRemoved,
+  onReconnect,
+}: UseSignalRProps = {}) {
   const connectionRef = useRef<signalR.HubConnection | null>(null);
 
   const [isConnected, setIsConnected] = useState(false);
@@ -70,6 +121,10 @@ export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
       setConnectionStatus('connected');
 
       await joinGroups();
+
+      // Al reconectar, la pantalla puede volver a consultar /Alerts
+      // para evitar datos desactualizados.
+      onReconnect?.();
     });
 
     connection.onclose(() => {
@@ -80,7 +135,60 @@ export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
 
     connection.on('ReceiveAlert', (alert: SignalRAlert) => {
       console.log('Alerta recibida por SignalR:', alert);
-      onAlertCreated(alert);
+      onAlertCreated?.(alert);
+    });
+
+    connection.on('onAlertAssumed', (payload: AlertStatusEvent) => {
+      const event = normalizeAlertEvent(payload);
+
+      console.log('Alerta asumida por SignalR:', event);
+
+      onAlertUpdated?.({
+        ...event,
+        estado: 'Asumida',
+      });
+    });
+
+    connection.on('onGuardEnRoute', (payload: AlertStatusEvent) => {
+      const event = normalizeAlertEvent(payload);
+
+      console.log('Guardia en camino por SignalR:', event);
+
+      onAlertUpdated?.({
+        ...event,
+        estado: 'En Camino',
+      });
+    });
+
+    connection.on('onAlertResolved', (payload: AlertStatusEvent) => {
+      const event = normalizeAlertEvent(payload);
+
+      console.log('Alerta resuelta por SignalR:', event);
+
+      onAlertUpdated?.({
+        ...event,
+        estado: 'Resuelta',
+      });
+    });
+
+    connection.on('onAlertClosed', (payload: AlertStatusEvent) => {
+      const event = normalizeAlertEvent(payload);
+
+      console.log('Alerta cerrada por SignalR:', event);
+
+      if (event.alertId) {
+        onAlertRemoved?.(event.alertId);
+      }
+    });
+
+    connection.on('onAlertCancelled', (payload: AlertStatusEvent) => {
+      const event = normalizeAlertEvent(payload);
+
+      console.log('Alerta cancelada por SignalR:', event);
+
+      if (event.alertId) {
+        onAlertRemoved?.(event.alertId);
+      }
     });
 
     const startConnection = async () => {
@@ -106,10 +214,22 @@ export function useSignalR({ zonaId, onAlertCreated }: UseSignalRProps) {
 
     return () => {
       connection.off('ReceiveAlert');
+      connection.off('onAlertAssumed');
+      connection.off('onGuardEnRoute');
+      connection.off('onAlertResolved');
+      connection.off('onAlertClosed');
+      connection.off('onAlertCancelled');
+
       connection.stop();
       connectionRef.current = null;
     };
-  }, [zonaId, onAlertCreated]);
+  }, [
+    zonaId,
+    onAlertCreated,
+    onAlertUpdated,
+    onAlertRemoved,
+    onReconnect,
+  ]);
 
   return {
     isConnected,
