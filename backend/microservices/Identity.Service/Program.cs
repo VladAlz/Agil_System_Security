@@ -54,7 +54,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();   // Aplica todas las migraciones pendientes (incluida AddTrustContacts)
 }
 
 if (app.Environment.IsDevelopment())
