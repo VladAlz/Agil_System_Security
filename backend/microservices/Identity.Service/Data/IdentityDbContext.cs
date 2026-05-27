@@ -9,6 +9,7 @@ namespace Identity.Service.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<Guard> Guards { get; set; }
+        public DbSet<TrustContact> TrustContacts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -25,6 +26,16 @@ namespace Identity.Service.Data
             modelBuilder.Entity<Guard>().HasData(
                 new Guard { Id = 1, UsuarioId = 2, ZonaId = 1, Estado = "En Servicio" }
             );
+
+            // TrustContact — índice en UsuarioId + cascade delete al borrar usuario
+            modelBuilder.Entity<TrustContact>(entity =>
+            {
+                entity.HasIndex(tc => tc.UsuarioId);
+                entity.HasOne(tc => tc.Usuario)
+                      .WithMany()
+                      .HasForeignKey(tc => tc.UsuarioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

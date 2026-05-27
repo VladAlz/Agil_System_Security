@@ -76,6 +76,16 @@ export default function PanicScreen({ navigation }: Props) {
         </Text>
       </View>
 
+      {/* Botón Grupo de Confianza — HU-10 */}
+      <TouchableOpacity
+        style={styles.trustGroupBtn}
+        onPress={() => navigation.navigate('TrustGroup')}
+      >
+        <Ionicons name="people-outline" size={20} color="#60a5fa" />
+        <Text style={styles.trustGroupText}>Grupo de Confianza</Text>
+        <Ionicons name="chevron-forward" size={16} color="#334155" />
+      </TouchableOpacity>
+
       <Text style={styles.footer}>S.S.I.U. — UTA · Zona segura activa</Text>
     </View>
   );
@@ -127,5 +137,24 @@ const styles = StyleSheet.create({
     color: '#1e3a5f',
     fontSize: 11,
     textAlign: 'center',
+  },
+  // ── Grupo de Confianza
+  trustGroupBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(59,130,246,0.06)',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(59,130,246,0.15)',
+    marginBottom: 12,
+  },
+  trustGroupText: {
+    flex: 1,
+    color: '#93c5fd',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

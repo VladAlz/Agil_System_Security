@@ -36,3 +36,11 @@ export interface AlertResponse {
   zoneId: number;
   message: string;
 }
+
+// ─── HU-10 Grupo de Confianza ─────────────────────────────────────────────────
+export interface TrustContact {
+  id: number;
+  nombre: string;
+  correo: string;
+  creadoEn: string;
+}

@@ -142,6 +142,97 @@ namespace Identity.Service.Controllers
             });
         }
 
+        // ─── Trust Group — HU-10 ──────────────────────────────────────────────
+
+        /// <summary>
+        /// GET api/auth/users/{userId}/trust-group
+        /// Devuelve la lista de contactos de confianza del usuario.
+        /// </summary>
+        [HttpGet("users/{userId:int}/trust-group")]
+        public async Task<IActionResult> GetTrustGroup(int userId)
+        {
+            var contacts = await _context.TrustContacts
+                .Where(tc => tc.UsuarioId == userId)
+                .OrderBy(tc => tc.CreadoEn)
+                .Select(tc => new { tc.Id, tc.Nombre, tc.Correo, tc.CreadoEn })
+                .ToListAsync();
+
+            return Ok(contacts);
+        }
+
+        /// <summary>
+        /// POST api/auth/users/{userId}/trust-group
+        /// Agrega un nuevo contacto de confianza. Límite: 5 contactos.
+        /// </summary>
+        [HttpPost("users/{userId:int}/trust-group")]
+        public async Task<IActionResult> AddTrustContact(int userId, [FromBody] TrustContactRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Nombre) || string.IsNullOrWhiteSpace(request.Correo))
+                return BadRequest(new { mensaje = "Nombre y correo son obligatorios." });
+
+            // Validar que el usuario existe
+            if (!await _context.Users.AnyAsync(u => u.Id == userId))
+                return NotFound(new { mensaje = "Usuario no encontrado." });
+
+            // Validar límite de 5 contactos (HU-10 Escenario 4)
+            var count = await _context.TrustContacts.CountAsync(tc => tc.UsuarioId == userId);
+            if (count >= 5)
+                return BadRequest(new { mensaje = "Has alcanzado el límite de 5 contactos de confianza." });
+
+            // Evitar duplicado de correo para el mismo usuario
+            var correo = request.Correo.Trim().ToLower();
+            if (await _context.TrustContacts.AnyAsync(tc => tc.UsuarioId == userId && tc.Correo.ToLower() == correo))
+                return BadRequest(new { mensaje = "Ese correo ya está en tu lista de contactos de confianza." });
+
+            var contact = new TrustContact
+            {
+                UsuarioId = userId,
+                Nombre    = request.Nombre.Trim(),
+                Correo    = correo,
+                CreadoEn  = DateTime.UtcNow
+            };
+
+            _context.TrustContacts.Add(contact);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { contact.Id, contact.Nombre, contact.Correo, contact.CreadoEn });
+        }
+
+        /// <summary>
+        /// DELETE api/auth/users/{userId}/trust-group/{contactId}
+        /// Elimina un contacto de confianza del usuario.
+        /// </summary>
+        [HttpDelete("users/{userId:int}/trust-group/{contactId:int}")]
+        public async Task<IActionResult> RemoveTrustContact(int userId, int contactId)
+        {
+            var contact = await _context.TrustContacts
+                .FirstOrDefaultAsync(tc => tc.Id == contactId && tc.UsuarioId == userId);
+
+            if (contact == null)
+                return NotFound(new { mensaje = "Contacto no encontrado." });
+
+            _context.TrustContacts.Remove(contact);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensaje = "Contacto eliminado correctamente." });
+        }
+
+        /// <summary>
+        /// GET api/auth/users/{userId}/trust-group/emails
+        /// Endpoint interno: Alerts.Service lo llama al crear una alerta para obtener
+        /// los correos de los contactos de confianza y enviarles notificación (T10-03).
+        /// </summary>
+        [HttpGet("users/{userId:int}/trust-group/emails")]
+        public async Task<IActionResult> GetTrustGroupEmails(int userId)
+        {
+            var emails = await _context.TrustContacts
+                .Where(tc => tc.UsuarioId == userId)
+                .Select(tc => new { tc.Nombre, tc.Correo })
+                .ToListAsync();
+
+            return Ok(emails);
+        }
+
         // ─── Helpers ──────────────────────────────────────────────────────────
 
         private string GenerateJwt(User user)
@@ -173,4 +264,7 @@ namespace Identity.Service.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
+
+    // ─── DTOs locales HU-10 ───────────────────────────────────────────────────
+    public record TrustContactRequest(string Nombre, string Correo);
 }
