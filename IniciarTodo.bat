@@ -63,13 +63,11 @@ echo.
 echo [PASO 1.5/4] Limpiando procesos en memoria...
 taskkill /F /IM dotnet.exe /T >nul 2>nul
 taskkill /F /IM node.exe /T >nul 2>nul
-echo   Limpiando cache del backend...
-dotnet clean "backend\microservices\Ssiu.Microservices.sln" -q >nul 2>nul
 echo.
 
 :: ─── Compilar backend ─────────────────────────────────────
 echo [PASO 2/4] Compilando backend .NET...
-dotnet build "backend\microservices\Ssiu.Microservices.sln" --nologo -q
+dotnet build "backend\microservices\Ssiu.Microservices.sln" -m:1 --nologo -q
 if %errorlevel% neq 0 (
     echo [ERROR] Compilacion del backend fallo.
     pause
