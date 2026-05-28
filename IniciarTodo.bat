@@ -59,6 +59,14 @@ if not exist "mobile\guard-app\node_modules" (
 )
 echo.
 
+:: ─── Limpieza del Entorno (Previene Errores de Caché) ─────────
+echo [PASO 1.5/4] Limpiando procesos en memoria...
+taskkill /F /IM dotnet.exe /T >nul 2>nul
+taskkill /F /IM node.exe /T >nul 2>nul
+echo   Limpiando cache del backend...
+dotnet clean "backend\microservices\Ssiu.Microservices.sln" -q >nul 2>nul
+echo.
+
 :: ─── Compilar backend ─────────────────────────────────────
 echo [PASO 2/4] Compilando backend .NET...
 dotnet build "backend\microservices\Ssiu.Microservices.sln" --nologo -q
@@ -104,11 +112,11 @@ start "Dashboard" /D "web\dashboard" cmd /k "npm run dev"
 timeout /t 2 /nobreak >nul
 
 echo   6. App Estudiante    -> http://localhost:8081
-start "UserApp" /D "mobile\user-app" cmd /k "npx expo start --web --port 8081"
+start "UserApp" /D "mobile\user-app" cmd /k "npx expo start -c --web --port 8081"
 timeout /t 2 /nobreak >nul
 
 echo   7. App Guardia       -> http://localhost:8082
-start "GuardApp" /D "mobile\guard-app" cmd /k "npx expo start --web --port 8082"
+start "GuardApp" /D "mobile\guard-app" cmd /k "npx expo start -c --web --port 8082"
 
 echo.
 echo =============================================================
