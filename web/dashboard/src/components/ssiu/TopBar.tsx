@@ -1,4 +1,4 @@
-import { Search, Wifi, Moon, LogOut, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   DropdownMenu, 
@@ -25,24 +25,10 @@ export const TopBar = () => {
         </p>
       </div>
 
-      <div className="flex-1 max-w-md ml-6 hidden md:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            placeholder="Buscar alerta, usuario o zona..."
-            className="w-full h-10 pl-10 pr-4 rounded-xl bg-muted/60 border border-transparent focus:border-primary/40 focus:bg-card outline-none text-sm transition-smooth"
-          />
-        </div>
-      </div>
+      <div className="flex-1"></div>
 
       <div className="ml-auto flex items-center gap-2">
-        <button className="w-10 h-10 rounded-xl bg-muted/60 hover:bg-muted flex items-center justify-center transition-smooth">
-          <Wifi className="w-4 h-4" />
-        </button>
-        <button className="w-10 h-10 rounded-xl bg-muted/60 hover:bg-muted flex items-center justify-center transition-smooth">
-          <Moon className="w-4 h-4" />
-        </button>
-        
+
         <div className="flex items-center gap-3 pl-3 ml-1 border-l border-border">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

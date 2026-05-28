@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "@/config/api";
 import { toast } from "sonner";
-import { Trash2, Users, ArrowLeft } from "lucide-react";
+import { Trash2, Users, ArrowLeft, Plus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 
 interface User {
   id: number;
@@ -14,8 +16,18 @@ interface User {
 
 export const AdminUsers = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    nombre: "",
+    correo: "",
+    password: "",
+    rol: "Estudiante",
+    facultad: "FISEI"
+  });
 
   const loadUsers = async () => {
     try {
@@ -36,6 +48,29 @@ export const AdminUsers = () => {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.mensaje || "Error al crear usuario");
+      
+      toast.success("Usuario creado exitosamente");
+      setIsModalOpen(false);
+      setFormData({ nombre: "", correo: "", password: "", rol: "Estudiante", facultad: "FISEI" });
+      loadUsers();
+    } catch (error: any) {
+      toast.error("Error", { description: error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("¿Seguro que deseas eliminar este usuario?")) return;
@@ -63,13 +98,71 @@ export const AdminUsers = () => {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-blue-500" />
               Administración de Usuarios
             </h1>
             <p className="text-xs text-slate-400 font-medium">Gestiona estudiantes, guardias y administradores</p>
           </div>
+
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+                <Plus className="w-4 h-4" />
+                Nuevo Usuario
+              </button>
+            </DialogTrigger>
+            <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateUser} className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase">Nombre Completo</label>
+                  <input required value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg h-10 px-3 text-sm focus:border-blue-500 outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase">Correo Electrónico</label>
+                  <input required type="email" value={formData.correo} onChange={e => setFormData({...formData, correo: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg h-10 px-3 text-sm focus:border-blue-500 outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase">Contraseña</label>
+                  <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg h-10 px-3 text-sm focus:border-blue-500 outline-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase">Rol</label>
+                    <select value={formData.rol} onChange={e => setFormData({...formData, rol: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg h-10 px-3 text-sm focus:border-blue-500 outline-none">
+                      <option value="Estudiante">Estudiante</option>
+                      <option value="Guardia">Guardia</option>
+                      <option value="Administrador">Administrador</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase">Facultad</label>
+                    <select value={formData.facultad} onChange={e => setFormData({...formData, facultad: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-lg h-10 px-3 text-sm focus:border-blue-500 outline-none">
+                      <option value="FISEI">FISEI</option>
+                      <option value="FCA">FCA</option>
+                      <option value="FDA">FDA</option>
+                      <option value="FCS">FCS</option>
+                      <option value="FIQA">FIQA</option>
+                      <option value="FAD">FAD</option>
+                      <option value="FJSA">FJSA</option>
+                      <option value="FCFM">FCFM</option>
+                      <option value="General">General</option>
+                    </select>
+                  </div>
+                </div>
+                <DialogFooter className="mt-6">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white">Cancelar</button>
+                  <button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                    {saving ? "Creando..." : "Crear Usuario"}
+                  </button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </header>
 
@@ -117,13 +210,15 @@ export const AdminUsers = () => {
                       </td>
                       <td className="px-6 py-4 text-slate-400">{u.facultad}</td>
                       <td className="px-6 py-4 text-right">
-                        <button 
-                          onClick={() => handleDelete(u.id)}
-                          className="p-2 text-slate-400 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors border border-transparent hover:border-red-500/30"
-                          title="Eliminar usuario"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        {u.id !== user?.id && (
+                          <button 
+                            onClick={() => handleDelete(u.id)}
+                            className="p-2 text-slate-400 hover:bg-red-500/10 hover:text-red-400 rounded-lg transition-colors border border-transparent hover:border-red-500/30"
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

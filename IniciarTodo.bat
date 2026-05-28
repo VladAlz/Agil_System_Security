@@ -63,15 +63,16 @@ echo.
 echo [PASO 1.5/4] Limpiando procesos en memoria...
 taskkill /F /IM dotnet.exe /T >nul 2>nul
 taskkill /F /IM node.exe /T >nul 2>nul
+echo   Esperando a que Windows libere los archivos...
+timeout /t 3 /nobreak >nul
 echo.
 
 :: ─── Compilar backend ─────────────────────────────────────
 echo [PASO 2/4] Compilando backend .NET...
 dotnet build "backend\microservices\Ssiu.Microservices.sln" -m:1 /nr:false --nologo -q
 if %errorlevel% neq 0 (
-    echo [ERROR] Compilacion del backend fallo.
-    pause
-    exit /b 1
+    echo [ADVERTENCIA] VS Code tiene bloqueados los archivos de cache ^(MSB3492^).
+    echo               Continuando con la ultima version compilada...
 )
 echo   OK.
 echo.

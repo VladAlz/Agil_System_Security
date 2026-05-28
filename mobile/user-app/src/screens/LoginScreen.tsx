@@ -82,9 +82,6 @@ export default function LoginScreen({ navigation }: Props) {
             : <Text style={styles.buttonText}>Ingresar</Text>}
         </Pressable>
 
-        <Pressable onPress={loginDev} testID="btn-dev-login">
-          <Text style={styles.devLink}>[ Modo prueba — sin backend ]</Text>
-        </Pressable>
 
         <Pressable onPress={() => navigation.navigate('Register')} testID="btn-register-link">
           <Text style={styles.registerLink}>¿No tienes cuenta? Regístrate aquí</Text>

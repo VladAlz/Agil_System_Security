@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Alert } from "@/data/alerts";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Shield, Clock, Eye, Flame, MapPin } from "lucide-react";
+import { AlertTriangle, Shield, Clock, Eye, Flame, MapPin, Search } from "lucide-react";
 
 interface AlertPanelProps {
   alerts: Alert[];
@@ -46,12 +46,22 @@ const formatElapsedTime = (timeStr: string) => {
 };
 
 export const AlertPanel: React.FC<AlertPanelProps> = ({ alerts, selectedId, onSelect, onFocusZone }) => {
-  // Filtrar solo las alertas activas, asumidas, en camino o resueltas (no cerradas ni canceladas)
   const activeAlerts = alerts.filter(
     (a) => a.status === "active" || a.status === "assigned" || a.status === "enroute" || a.status === "resolved"
   );
 
   const [elapsedTimes, setElapsedTimes] = useState<Record<string, string>>({});
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const filteredAlerts = activeAlerts.filter(a => {
+    if (filterStatus !== "all" && a.status !== filterStatus) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return a.user.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || a.zone.toLowerCase().includes(q);
+    }
+    return true;
+  });
 
   useEffect(() => {
     const updateTimes = () => {
@@ -76,18 +86,48 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({ alerts, selectedId, onSe
             {activeAlerts.length} emergencias
           </span>
         </div>
-        <p className="text-xs text-muted-foreground">Monitoreo y despacho en tiempo real</p>
+        <p className="text-xs text-muted-foreground mb-4">Monitoreo y despacho en tiempo real</p>
+        
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input 
+              type="text" 
+              placeholder="Buscar por nombre, código o zona..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full h-8 pl-8 pr-3 text-xs bg-muted/50 border border-transparent rounded-lg focus:outline-none focus:border-primary/50 focus:bg-background transition-colors"
+            />
+          </div>
+          
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            {[{id: "all", label: "Todas"}, {id: "active", label: "Activas"}, {id: "assigned", label: "Asumidas"}].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFilterStatus(f.id)}
+                className={cn(
+                  "px-3 py-1 text-[10px] font-semibold rounded-full border transition-colors whitespace-nowrap",
+                  filterStatus === f.id 
+                    ? "bg-primary/20 border-primary/40 text-primary" 
+                    : "bg-muted/50 border-transparent text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {activeAlerts.length === 0 ? (
+        {filteredAlerts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-muted-foreground text-xs text-center space-y-2">
             <Shield className="w-8 h-8 opacity-25 text-success" />
             <p className="font-semibold text-success">Campus Seguro</p>
-            <p className="text-[10px]">No hay emergencias activas en este momento</p>
+            <p className="text-[10px]">No hay emergencias que coincidan</p>
           </div>
         ) : (
-          activeAlerts.map((alert, i) => {
+          filteredAlerts.map((alert, i) => {
             const T = typeMeta[alert.type] || typeMeta.panic;
             const S = statusMeta[alert.status] || statusMeta.active;
             const isSelected = alert.id === selectedId;
