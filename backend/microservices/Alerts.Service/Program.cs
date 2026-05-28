@@ -1,5 +1,6 @@
 using Alerts.Service.Data;
 using Alerts.Service.Hubs;
+using Alerts.Service.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -56,6 +57,9 @@ builder.Services.AddSwaggerGen(c =>
 
 // ─── HttpClient para comunicación inter-servicios ─────────────────────────────
 builder.Services.AddHttpClient();
+
+// ─── Servicios ────────────────────────────────────────────────────────────────
+builder.Services.AddTransient<IEmailService, SmtpEmailService>();
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>

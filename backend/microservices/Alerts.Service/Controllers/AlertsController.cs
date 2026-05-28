@@ -18,17 +18,20 @@ namespace Alerts.Service.Controllers
         private readonly IHubContext<AlertHub>  _hubContext;
         private readonly IHttpClientFactory     _httpFactory;
         private readonly IConfiguration         _config;
+        private readonly Services.IEmailService _emailService;
 
         public AlertsController(
             AlertsDbContext       context,
             IHubContext<AlertHub> hubContext,
             IHttpClientFactory    httpFactory,
-            IConfiguration        config)
+            IConfiguration        config,
+            Services.IEmailService emailService)
         {
             _context     = context;
             _hubContext  = hubContext;
             _httpFactory = httpFactory;
             _config      = config;
+            _emailService = emailService;
         }
 
 
@@ -105,6 +108,39 @@ namespace Alerts.Service.Controllers
             // 4. Notificar en tiempo real vía SignalR
             await _hubContext.Clients.Group($"zona_{zonaId}").SendAsync("ReceiveAlert", alert);
             await _hubContext.Clients.Group("admins").SendAsync("ReceiveAlert", alert);
+
+            // 5. Enviar correos al Grupo de Confianza (Background)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Obtener los correos del grupo de confianza de Identity.Service
+                    var emailsResp = await http.GetAsync($"{identityBase}/api/auth/users/{dto.UsuarioId}/trust-group/emails");
+                    if (emailsResp.IsSuccessStatusCode)
+                    {
+                        var contacts = await emailsResp.Content.ReadFromJsonAsync<List<TrustContactDto>>();
+                        if (contacts != null && contacts.Any())
+                        {
+                            foreach (var contact in contacts)
+                            {
+                                await _emailService.SendEmergencyAlertAsync(
+                                    toEmail: contact.Correo,
+                                    toName: contact.Nombre,
+                                    studentName: alert.NombreUsuario,
+                                    faculty: alert.Facultad,
+                                    zone: alert.NombreZona,
+                                    lat: alert.Lat,
+                                    lng: alert.Lng
+                                );
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error al enviar correos de emergencia: {ex.Message}");
+                }
+            });
 
             return Ok(alert);
         }
@@ -569,4 +605,6 @@ namespace Alerts.Service.Controllers
         public string Estado        { get; set; } = string.Empty;
         public string NombreGuardia { get; set; } = string.Empty;
     }
+
+    public record TrustContactDto(string Nombre, string Correo);
 }

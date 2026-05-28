@@ -67,7 +67,7 @@ echo.
 
 :: ─── Compilar backend ─────────────────────────────────────
 echo [PASO 2/4] Compilando backend .NET...
-dotnet build "backend\microservices\Ssiu.Microservices.sln" -m:1 --nologo -q
+dotnet build "backend\microservices\Ssiu.Microservices.sln" -m:1 /nr:false --nologo -q
 if %errorlevel% neq 0 (
     echo [ERROR] Compilacion del backend fallo.
     pause
@@ -110,11 +110,11 @@ start "Dashboard" /D "web\dashboard" cmd /k "npm run dev"
 timeout /t 2 /nobreak >nul
 
 echo   6. App Estudiante    -> http://localhost:8081
-start "UserApp" /D "mobile\user-app" cmd /k "npx expo start -c --web --port 8081"
+start "UserApp" /D "mobile\user-app" cmd /k "set EXPO_OFFLINE=true&& npx expo start -c --web --port 8081"
 timeout /t 2 /nobreak >nul
 
 echo   7. App Guardia       -> http://localhost:8082
-start "GuardApp" /D "mobile\guard-app" cmd /k "npx expo start -c --web --port 8082"
+start "GuardApp" /D "mobile\guard-app" cmd /k "set EXPO_OFFLINE=true&& npx expo start -c --web --port 8082"
 
 echo.
 echo =============================================================
