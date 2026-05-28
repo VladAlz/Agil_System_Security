@@ -74,6 +74,12 @@ function getAuthHeaders(): HeadersInit {
 
 async function fetchJson<T>(url: string): Promise<T> {
   const resp = await fetch(url, { headers: getAuthHeaders() });
+  if (resp.status === 401) {
+    localStorage.removeItem("ssiu_token");
+    localStorage.removeItem("ssiu_user");
+    window.location.href = "/"; // Force redirect to login
+    throw new Error("Sesión expirada. Por favor, inicie sesión nuevamente.");
+  }
   if (!resp.ok) throw new Error(`Error ${resp.status}: ${resp.statusText}`);
   return resp.json() as Promise<T>;
 }
@@ -153,6 +159,12 @@ export async function createShiftReport(dto: {
     headers: getAuthHeaders(),
     body: JSON.stringify(dto),
   });
+  if (resp.status === 401) {
+    localStorage.removeItem("ssiu_token");
+    localStorage.removeItem("ssiu_user");
+    window.location.href = "/";
+    throw new Error("Sesión expirada.");
+  }
   if (!resp.ok) throw new Error(`Error ${resp.status}: ${resp.statusText}`);
   return resp.json() as Promise<ShiftReport>;
 }
@@ -174,6 +186,12 @@ export async function closeShiftReport(
     headers: getAuthHeaders(),
     body: JSON.stringify(dto),
   });
+  if (resp.status === 401) {
+    localStorage.removeItem("ssiu_token");
+    localStorage.removeItem("ssiu_user");
+    window.location.href = "/";
+    throw new Error("Sesión expirada.");
+  }
   if (!resp.ok) throw new Error(`Error ${resp.status}: ${resp.statusText}`);
   return resp.json() as Promise<ShiftReport>;
 }
