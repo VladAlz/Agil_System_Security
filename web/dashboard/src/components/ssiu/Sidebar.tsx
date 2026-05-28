@@ -5,12 +5,9 @@ import { Simulator } from "./Simulator";
 import { Alert } from "@/data/alerts";
 
 const items = [
-  { icon: LayoutDashboard, label: "Panel",     path: "/",           badge: 0 },
-  { icon: Bell,            label: "Alertas",   path: "/",           badge: 2 },
-  { icon: Map,             label: "Mapa UTA",  path: "/",           badge: 0 },
   { icon: Users,           label: "Turnos",    path: "/shifts",     badge: 0 },
   { icon: BarChart3,       label: "Reportes",  path: "/statistics", badge: 0 },
-  { icon: Settings,        label: "Ajustes",   path: "/",           badge: 0 },
+  { icon: Shield,          label: "Adm. Usuarios", path: "/users",   badge: 0 },
 ];
 
 interface SidebarProps {

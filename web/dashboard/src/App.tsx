@@ -4,11 +4,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import Index from "./pages/Index.tsx";
-import Login from "./pages/Login.tsx";
-import Statistics from "./pages/Statistics.tsx";
-import Shifts from "./pages/Shifts.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import Shifts from "./pages/Shifts";
+import Statistics from "./pages/Statistics";
+import { AdminUsers } from "./pages/AdminUsers";
 import 'leaflet/dist/leaflet.css';
 
 const queryClient = new QueryClient();
@@ -30,30 +31,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
-    <Route 
-      path="/" 
-      element={
-        <ProtectedRoute>
-          <Index />
-        </ProtectedRoute>
-      } 
-    />
-    <Route 
-      path="/statistics" 
-      element={
-        <ProtectedRoute>
-          <Statistics />
-        </ProtectedRoute>
-      } 
-    />
-    <Route 
-      path="/shifts" 
-      element={
-        <ProtectedRoute>
-          <Shifts />
-        </ProtectedRoute>
-      } 
-    />
+    <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+    <Route path="/shifts" element={<ProtectedRoute><Shifts /></ProtectedRoute>} />
+    <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+    <Route path="/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

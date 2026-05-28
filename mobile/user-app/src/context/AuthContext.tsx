@@ -22,14 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     mounted.current = true;
     (async () => {
-      const [storedToken, storedUser] = await Promise.all([
-        authService.getStoredToken(),
-        authService.getStoredUser(),
-      ]);
-      if (mounted.current && storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(storedUser);
-      }
+      // HU-10 / Security: Se deshabilita el auto-login para obligar siempre a pasar por la pantalla de login por seguridad.
       if (mounted.current) setIsLoading(false);
     })();
     return () => { mounted.current = false; };

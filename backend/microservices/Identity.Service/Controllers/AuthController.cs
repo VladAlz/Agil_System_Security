@@ -142,6 +142,42 @@ namespace Identity.Service.Controllers
             });
         }
 
+        // ─── User CRUD (Admin) ───────────────────────────────────────────────────
+
+        /// <summary>GET api/auth/users — Lista todos los usuarios (para Admin).</summary>
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsers()
+        {
+            var users = await _context.Users
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Nombre,
+                    u.Correo,
+                    u.Rol,
+                    u.Facultad
+                })
+                .ToListAsync();
+
+            return Ok(users);
+        }
+
+        /// <summary>DELETE api/auth/users/{id} — Elimina un usuario por ID.</summary>
+        [HttpDelete("users/{id:int}")]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+                return NotFound(new { mensaje = "Usuario no encontrado" });
+
+            // Eliminar dependencias si las hay (Guards, TrustContacts) son en cascada si está configurado en DB,
+            // pero EF Core lo maneja.
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { mensaje = "Usuario eliminado correctamente" });
+        }
+
         // ─── Trust Group — HU-10 ──────────────────────────────────────────────
 
         /// <summary>

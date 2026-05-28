@@ -5,11 +5,13 @@ import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import ConfirmationScreen from './src/screens/ConfirmationScreen';
 import LoginScreen from './src/screens/LoginScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
 import PanicScreen from './src/screens/PanicScreen';
 import TrustGroupScreen from './src/screens/TrustGroupScreen';
 
 export type RootStackParamList = {
   Login: undefined;
+  Register: undefined;
   Panic: undefined;
   Confirmation: { timestamp: string; userId: string };
   TrustGroup: undefined;
@@ -37,7 +39,10 @@ function AppNavigator() {
           <Stack.Screen name="TrustGroup" component={TrustGroupScreen} />
         </>
       ) : (
-        <Stack.Screen name="Login" component={LoginScreen} />
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+        </>
       )}
     </Stack.Navigator>
   );

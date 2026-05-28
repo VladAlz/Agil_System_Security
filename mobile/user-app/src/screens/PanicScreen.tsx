@@ -11,7 +11,7 @@ import { BASE_URL } from '../config/api';
 type Props = NativeStackScreenProps<RootStackParamList, 'Panic'>;
 
 export default function PanicScreen({ navigation }: Props) {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
 
   const handleLogout = async () => {
     const doLogout = async () => {
@@ -42,18 +42,31 @@ export default function PanicScreen({ navigation }: Props) {
         lng: -78.6245
       };
 
-      await fetch(`${BASE_URL}/Alerts`, {
+      const alertResponse = await fetch(`${BASE_URL}/Alerts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` 
+        },
         body: JSON.stringify(alertData)
       });
+
+      if (!alertResponse.ok) {
+        const errText = await alertResponse.text();
+        throw new Error(`Error del servidor: ${alertResponse.status} ${errText}`);
+      }
 
       navigation.navigate('Confirmation', {
         timestamp: new Date().toISOString(),
         userId: user?.id ?? '',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending panic alert:", error);
+      if (Platform.OS === 'web') {
+        window.alert(`No se pudo enviar la alerta. Error: ${error.message}`);
+      } else {
+        Alert.alert('Error', `No se pudo enviar la alerta. Verifica tu conexión o vuelve a iniciar sesión con una cuenta válida.`);
+      }
     }
   };
 

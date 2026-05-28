@@ -64,6 +64,12 @@ export const authService = {
       return null;
     }
 
+    const usuario = JSON.parse(userJson);
+
+    if (usuario.rol !== 'Guardia') {
+      throw new Error('Acceso denegado: Esta aplicación es solo para Guardias.');
+    }
+
     return {
       token,
       usuario: JSON.parse(userJson),

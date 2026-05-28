@@ -26,12 +26,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadSession = async () => {
     try {
-      const session = await authService.getSession();
-
-      if (session) {
-        setToken(session.token);
-        setGuard(session.usuario);
-      }
+      // HU-10 / Security: Se deshabilita el auto-login para obligar siempre a pasar por la pantalla de login por seguridad.
+      // const session = await authService.getSession();
+      // if (session) {
+      //   setToken(session.token);
+      //   setGuard(session.usuario);
+      // }
     } catch (error) {
       await authService.logout();
       setToken(null);

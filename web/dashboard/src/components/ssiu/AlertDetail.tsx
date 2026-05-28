@@ -197,18 +197,6 @@ export const AlertDetail = ({ alert, onClose }: Props) => {
                   className="w-full min-h-[160px] p-5 rounded-2xl bg-card border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-base resize-none transition-all disabled:opacity-60 font-medium"
                 />
                 <div className="flex flex-wrap gap-3">
-                  {!isClosed && (
-                    <>
-                      {isActive && (
-                        <Button className="h-12 px-6 bg-sunset hover:bg-sunset/90 text-white font-bold rounded-xl shadow-lg shadow-sunset/20 gap-2">
-                          <Shield className="w-5 h-5" /> Asumir Alerta
-                        </Button>
-                      )}
-                      <Button className="h-12 px-6 bg-success hover:bg-success/90 text-white font-bold rounded-xl shadow-lg shadow-success/20 gap-2">
-                        <CheckCircle2 className="w-5 h-5" /> Finalizar Caso
-                      </Button>
-                    </>
-                  )}
                   <Button variant="outline" className="h-12 px-6 rounded-xl border-border hover:bg-card gap-2">
                     <MessageSquare className="w-5 h-5" /> Contactar Usuario
                   </Button>

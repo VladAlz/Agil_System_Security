@@ -20,6 +20,10 @@ export const authService = {
         { timeout: 8000 },
       );
       
+      if (data.usuario.rol !== 'Estudiante') {
+        throw new Error('Acceso denegado: Esta aplicación es solo para Estudiantes.');
+      }
+
       const mappedResponse: LoginResponse = {
         accessToken: data.token,
         refreshToken: "",

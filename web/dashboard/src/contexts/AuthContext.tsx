@@ -52,6 +52,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = data.usuario;
         const userToken = data.token;
 
+        if (userData.rol !== "Administrador") {
+          throw new Error("Acceso denegado: Solo los administradores pueden acceder a este panel.");
+        }
+
         localStorage.setItem("ssiu_token", userToken);
         localStorage.setItem("ssiu_user", JSON.stringify(userData));
 

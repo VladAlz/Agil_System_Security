@@ -1,11 +1,15 @@
 using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
+using Identity.Service.Data;
+
 namespace Identity.Service.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(IdentityDbContext))]
+    [Migration("20260527000000_AddTrustContacts")]
     public partial class AddTrustContacts : Migration
     {
         /// <inheritdoc />

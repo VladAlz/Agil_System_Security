@@ -8,32 +8,57 @@ import {
   Text,
   TextInput,
   View,
+  Alert
 } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
+import { BASE_URL } from '../config/api';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
-export default function LoginScreen({ navigation }: Props) {
-  const { login, loginDev } = useAuth();
+export default function RegisterScreen({ navigation }: Props) {
+  const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [facultad, setFacultad] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      setError('Completa todos los campos');
+  const handleRegister = async () => {
+    if (!nombre.trim() || !email.trim() || !password.trim()) {
+      setError('Nombre, correo y contraseña son obligatorios');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await login(email.trim(), password);
+      const response = await fetch(`${BASE_URL}/Auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: nombre.trim(),
+          correo: email.trim(),
+          password: password.trim(),
+          rol: 'Estudiante',
+          facultad: facultad.trim() || 'General'
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.mensaje || 'Error al registrar el usuario');
+      }
+
+      if (Platform.OS === 'web') {
+        window.alert('Registro exitoso. Ahora puedes iniciar sesión con tus credenciales.');
+        navigation.navigate('Login');
+      } else {
+        Alert.alert('Registro exitoso', 'Ahora puedes iniciar sesión con tus credenciales', [
+          { text: 'Aceptar', onPress: () => navigation.navigate('Login') }
+        ]);
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
+      setError(err instanceof Error ? err.message : 'Error de conexión');
     } finally {
       setLoading(false);
     }
@@ -45,9 +70,16 @@ export default function LoginScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.card}>
-        <Text style={styles.title}>S.S.I.U.</Text>
-        <Text style={styles.subtitle}>Sistema de Seguridad{'\n'}Universidad Técnica de Ambato</Text>
+        <Text style={styles.title}>Registro</Text>
+        <Text style={styles.subtitle}>Crea tu cuenta de Estudiante</Text>
 
+        <TextInput
+          style={styles.input}
+          placeholder="Nombre completo"
+          placeholderTextColor="#6b7280"
+          value={nombre}
+          onChangeText={setNombre}
+        />
         <TextInput
           style={styles.input}
           placeholder="Correo electrónico"
@@ -57,7 +89,6 @@ export default function LoginScreen({ navigation }: Props) {
           autoCorrect={false}
           value={email}
           onChangeText={setEmail}
-          testID="input-email"
         />
         <TextInput
           style={styles.input}
@@ -66,28 +97,29 @@ export default function LoginScreen({ navigation }: Props) {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          testID="input-password"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Facultad (Ej. FISEI)"
+          placeholderTextColor="#6b7280"
+          value={facultad}
+          onChangeText={setFacultad}
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <Pressable
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
+          onPress={handleRegister}
           disabled={loading}
-          testID="btn-login"
         >
           {loading
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.buttonText}>Ingresar</Text>}
+            : <Text style={styles.buttonText}>Registrarse</Text>}
         </Pressable>
 
-        <Pressable onPress={loginDev} testID="btn-dev-login">
-          <Text style={styles.devLink}>[ Modo prueba — sin backend ]</Text>
-        </Pressable>
-
-        <Pressable onPress={() => navigation.navigate('Register')} testID="btn-register-link">
-          <Text style={styles.registerLink}>¿No tienes cuenta? Regístrate aquí</Text>
+        <Pressable onPress={() => navigation.goBack()} style={{ marginTop: 10 }}>
+          <Text style={styles.backLink}>Volver al inicio de sesión</Text>
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -109,10 +141,10 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#f1f5f9',
-    fontSize: 30,
+    fontSize: 26,
     fontWeight: '700',
     textAlign: 'center',
-    letterSpacing: 4,
+    letterSpacing: 2,
   },
   subtitle: {
     color: '#64748b',
@@ -136,29 +168,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#ef4444',
+    backgroundColor: '#38bdf8',
     borderRadius: 10,
     padding: 16,
     alignItems: 'center',
     marginTop: 4,
   },
-  buttonDisabled: { backgroundColor: '#6b7280' },
+  buttonDisabled: { backgroundColor: '#0284c7' },
   buttonText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
   },
-  devLink: {
-    color: '#475569',
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  registerLink: {
-    color: '#38bdf8',
+  backLink: {
+    color: '#94a3b8',
     fontSize: 14,
     textAlign: 'center',
-    marginTop: 10,
-    textDecorationLine: 'underline',
   },
 });

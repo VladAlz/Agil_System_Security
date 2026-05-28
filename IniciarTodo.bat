@@ -84,6 +84,10 @@ timeout /t 2 /nobreak >nul
 
 echo   3. Alerts.Service    :5002
 start "Alerts" /D "backend\microservices" cmd /k "dotnet run --project Alerts.Service --no-build"
+timeout /t 2 /nobreak >nul
+
+echo   3.5 Report.API       :5004
+start "Report" /D "backend\microservices" cmd /k "dotnet run --project Report.API --no-build"
 
 echo   Esperando 5s para el Gateway...
 timeout /t 5 /nobreak >nul
@@ -100,11 +104,11 @@ start "Dashboard" /D "web\dashboard" cmd /k "npm run dev"
 timeout /t 2 /nobreak >nul
 
 echo   6. App Estudiante    -> http://localhost:8081
-start "UserApp" /D "mobile\user-app" cmd /k "expo start --web --port 8081"
+start "UserApp" /D "mobile\user-app" cmd /k "npx expo start --web --port 8081"
 timeout /t 2 /nobreak >nul
 
 echo   7. App Guardia       -> http://localhost:8082
-start "GuardApp" /D "mobile\guard-app" cmd /k "expo start --web --port 8082"
+start "GuardApp" /D "mobile\guard-app" cmd /k "npx expo start --web --port 8082"
 
 echo.
 echo =============================================================
