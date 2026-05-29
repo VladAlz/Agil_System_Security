@@ -1,7 +1,7 @@
 import { Bell, LayoutDashboard, Map, Shield, Users, BarChart3, Settings, LogOut } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Simulator } from "./Simulator";
+
 import { Alert } from "@/data/alerts";
 
 const items = [
@@ -68,7 +68,7 @@ export const Sidebar = ({ onTriggerAlert, alertCount }: SidebarProps) => {
       
       {onTriggerAlert && (
         <div className="mt-4 px-2 hidden lg:block">
-          <Simulator onTriggerAlert={onTriggerAlert} />
+
         </div>
       )}
     </nav>

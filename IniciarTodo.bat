@@ -123,24 +123,17 @@ echo   TODOS LOS SERVICIOS INICIADOS
 echo =============================================================
 echo.
 echo   Backend:
-echo     Gateway       -> http://localhost:5000
-echo     Identity      -> http://localhost:5001/swagger
-echo     Alerts        -> http://localhost:5002/swagger
-echo     Campus        -> http://localhost:5003/swagger
+echo     Gateway       -^> http://localhost:5000
+echo     Identity      -^> http://localhost:5001/swagger
+echo     Alerts        -^> http://localhost:5002/swagger
+echo     Campus        -^> http://localhost:5003/swagger
 echo.
 echo   Frontend Web:
-echo     Dashboard     -> http://localhost:8080
-echo     App Estudiante -> http://localhost:8081
-echo     App Guardia   -> http://localhost:8082
+echo     Dashboard     -^> http://localhost:8080
+echo     App Estudiante -^> http://localhost:8081
+echo     App Guardia   -^> http://localhost:8082
 echo.
-echo   Abriendo el navegador con las 3 apps...
-timeout /t 5 /nobreak >nul
-start http://localhost:8080
-timeout /t 1 /nobreak >nul
-start http://localhost:8081
-timeout /t 1 /nobreak >nul
-start http://localhost:8082
-
+echo   Las 3 pestanas se abriran automaticamente en tu navegador.
 echo.
 echo   =============================================================
 echo   LISTO - Todo funcionando

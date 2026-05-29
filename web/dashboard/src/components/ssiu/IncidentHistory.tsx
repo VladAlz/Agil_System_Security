@@ -51,25 +51,30 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ alerts, onSele
   const [apiAlerts, setApiAlerts] = useState<BackendAlert[] | null>(null);
   const [isLive, setIsLive]       = useState(false);
 
-  useEffect(() => {
+  const fetchClosedAlerts = () => {
     const token = localStorage.getItem("ssiu_token") ?? "";
 
-    // Cargar las últimas 50 alertas cerradas/canceladas desde Alerts.Service
-    fetch(`${API_URL}/alerts?estado=Cerrada&pageSize=50`, {
+    // Cargar todas las alertas recientes y filtrar Cerrada+Cancelada en frontend
+    fetch(`${API_URL}/alerts?pageSize=100`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.json())
       .then(data => {
         const items: BackendAlert[] = Array.isArray(data) ? data : (data.items ?? []);
-        if (items.length > 0) {
-          setApiAlerts(items);
-          setIsLive(true);
-        }
+        const closed = items.filter(a => a.estado === "Cerrada" || a.estado === "Cancelada");
+        setApiAlerts(closed);
+        setIsLive(true);
       })
       .catch(() => {
-        // Backend no disponible → usa datos props (mocks)
         setIsLive(false);
       });
+  };
+
+  useEffect(() => {
+    fetchClosedAlerts();
+    // Polling cada 30 segundos para detectar alertas cerradas por guardias
+    const interval = setInterval(fetchClosedAlerts, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // ── Datos a mostrar: API real o fallback a props ───────────────────────────
@@ -89,8 +94,8 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ alerts, onSele
   const paginated     = closedAlerts.slice(currentPage * POR_PAGINA, (currentPage + 1) * POR_PAGINA);
 
   return (
-    <div className="w-full border-t border-border bg-card/30 p-5 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="w-full border-t border-border bg-card/30 p-5 space-y-4 flex flex-col max-h-[35vh] shrink-0">
+      <div className="flex items-center justify-between shrink-0">
         <div>
           <h2 className="font-bold text-sm tracking-wide">Historial del Día — Incidentes Cerrados</h2>
           <p className="text-xs text-muted-foreground">Alertas resueltas o canceladas · Campus Huachi</p>
@@ -112,25 +117,21 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ alerts, onSele
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-border/60 rounded-xl bg-card/50">
+      <div className="overflow-auto flex-1 border border-border/60 rounded-xl bg-card/50">
         <table className="w-full text-xs text-left">
           <thead>
             <tr className="border-b border-border bg-muted/40 font-bold text-muted-foreground uppercase tracking-wider">
-              <th className="px-4 py-3">Código</th>
-              <th className="px-4 py-3">Usuario</th>
-              <th className="px-4 py-3">Facultad</th>
-              <th className="px-4 py-3">Zona</th>
-              <th className="px-4 py-3">Hora Inicio</th>
-              <th className="px-4 py-3">Hora Asumida</th>
-              <th className="px-4 py-3">Guardia</th>
-              <th className="px-4 py-3">T. Respuesta</th>
-              <th className="px-4 py-3">Estado</th>
+              <th className="px-3 py-2">Código</th>
+              <th className="px-3 py-2">Usuario</th>
+              <th className="px-3 py-2">Hora</th>
+              <th className="px-3 py-2">Guardia</th>
+              <th className="px-3 py-2">Estado</th>
             </tr>
           </thead>
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-8 text-muted-foreground font-medium">
+                <td colSpan={5} className="text-center py-6 text-muted-foreground font-medium">
                   No hay incidentes cerrados registrados
                 </td>
               </tr>
@@ -146,15 +147,11 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ alerts, onSele
                       "border-b border-border/40 hover:bg-muted/20 cursor-pointer transition-colors",
                       i % 2 === 0 ? "bg-transparent" : "bg-muted/10"
                     )}>
-                    <td className="px-4 py-3 font-mono font-bold text-primary">ALT-{1000 + a.id}</td>
-                    <td className="px-4 py-3 font-semibold">{a.nombreUsuario}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{a.facultad || "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{a.nombreZona.split("—")[0].trim()}</td>
-                    <td className="px-4 py-3 font-mono">{fmt(a.fechaHora)}</td>
-                    <td className="px-4 py-3 font-mono">{fmt(a.fechaAsumida)}</td>
-                    <td className="px-4 py-3 font-medium">{a.guardiaAsignadoNombre || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-success font-semibold">{isCancelled ? "—" : responseTime}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2 font-mono font-bold text-primary">ALT-{1000 + a.id}</td>
+                    <td className="px-3 py-2 font-semibold">{a.nombreUsuario}</td>
+                    <td className="px-3 py-2 font-mono">{fmt(a.fechaHora)}</td>
+                    <td className="px-3 py-2 font-medium">{a.guardiaAsignadoNombre || "—"}</td>
+                    <td className="px-3 py-2">
                       <span className={cn(
                         "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border",
                         isCancelled
@@ -194,15 +191,11 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ alerts, onSele
                       "border-b border-border/40 hover:bg-muted/20 cursor-pointer transition-colors",
                       i % 2 === 0 ? "bg-transparent" : "bg-muted/10"
                     )}>
-                    <td className="px-4 py-3 font-mono font-bold text-primary">{alert.code}</td>
-                    <td className="px-4 py-3 font-semibold">{alert.user.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{alert.user.faculty || "—"}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{alert.zone.split("—")[0].trim()}</td>
-                    <td className="px-4 py-3 font-mono">{startTime}</td>
-                    <td className="px-4 py-3 font-mono">{endTime}</td>
-                    <td className="px-4 py-3 font-medium">{alert.guard || "—"}</td>
-                    <td className="px-4 py-3 font-mono text-success font-semibold">{isCancelled ? "—" : responseTime}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2 font-mono font-bold text-primary">{alert.code}</td>
+                    <td className="px-3 py-2 font-semibold">{alert.user.name}</td>
+                    <td className="px-3 py-2 font-mono">{startTime}</td>
+                    <td className="px-3 py-2 font-medium">{alert.guard || "—"}</td>
+                    <td className="px-3 py-2">
                       <span className={cn(
                         "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border",
                         isCancelled

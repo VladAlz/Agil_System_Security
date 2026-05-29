@@ -6,7 +6,7 @@ import { API_URL, HUB_URL } from "@/config/api";
 
 export const useAlertHub = () => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>(initialAlerts);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -20,16 +20,20 @@ export const useAlertHub = () => {
   }, []);
 
   useEffect(() => {
-    // 1. Fetch initial alerts from backend — usa pageSize=100 para cargar las primeras 100 alertas
-    fetch(`${API_URL}/alerts?page=0&pageSize=100`)
-      .then(res => res.json())
+    const token = localStorage.getItem("ssiu_token") || "";
+
+    fetch(`${API_URL}/alerts?page=0&pageSize=100`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         // La respuesta ahora es { total, page, pageSize, totalPages, items: [...] }
         const alertsArray = Array.isArray(data) ? data : (data.items ?? []);
         const mappedAlerts = alertsArray.map(mapBackendAlertToFrontend);
-        if (mappedAlerts.length > 0) {
-          setAlerts(mappedAlerts);
-        }
+        setAlerts(mappedAlerts);
       })
       .catch(err => console.warn("[useAlertHub] Error fetching initial alerts:", err));
 
