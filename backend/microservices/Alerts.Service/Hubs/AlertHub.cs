@@ -16,5 +16,18 @@ namespace Alerts.Service.Hubs
 
         public async Task JoinAdminGroup()
             => await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
+
+        public async Task UpdateGuardLocation(string guardName, int zoneId, double lat, double lng)
+        {
+            // Retransmitir la ubicación a todos los clientes (principalmente admins)
+            await Clients.All.SendAsync("ReceiveGuardLocation", new 
+            {
+                GuardName = guardName,
+                ZoneId = zoneId,
+                Lat = lat,
+                Lng = lng,
+                Timestamp = DateTime.UtcNow
+            });
+        }
     }
 }

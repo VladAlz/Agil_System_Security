@@ -4,9 +4,18 @@ import { Alert, alerts as initialAlerts } from "@/data/alerts";
 import { toast } from "sonner";
 import { API_URL, HUB_URL } from "@/config/api";
 
+export interface GuardLocation {
+  guardName: string;
+  zoneId: number;
+  lat: number;
+  lng: number;
+  timestamp: Date;
+}
+
 export const useAlertHub = () => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [guards, setGuards] = useState<Record<string, GuardLocation>>({});
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -22,20 +31,27 @@ export const useAlertHub = () => {
   useEffect(() => {
     const token = localStorage.getItem("ssiu_token") || "";
 
-    fetch(`${API_URL}/alerts?page=0&pageSize=100`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
+    if (token) {
+      fetch(`${API_URL}/alerts?page=0&pageSize=100`, {
+        headers: { Authorization: `Bearer ${token}` }
       })
-      .then(data => {
-        // La respuesta ahora es { total, page, pageSize, totalPages, items: [...] }
-        const alertsArray = Array.isArray(data) ? data : (data.items ?? []);
-        const mappedAlerts = alertsArray.map(mapBackendAlertToFrontend);
-        setAlerts(mappedAlerts);
-      })
-      .catch(err => console.warn("[useAlertHub] Error fetching initial alerts:", err));
+        .then(res => {
+          if (res.status === 401) {
+            localStorage.removeItem("ssiu_token");
+            localStorage.removeItem("ssiu_user");
+            window.location.href = "/login";
+          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          // La respuesta ahora es { total, page, pageSize, totalPages, items: [...] }
+          const alertsArray = Array.isArray(data) ? data : (data.items ?? []);
+          const mappedAlerts = alertsArray.map(mapBackendAlertToFrontend);
+          setAlerts(mappedAlerts);
+        })
+        .catch(err => console.warn("[useAlertHub] Error fetching initial alerts:", err));
+    }
 
     // 2. Start SignalR
     if (connection) {
@@ -55,6 +71,19 @@ export const useAlertHub = () => {
               description: `${mappedAlert.user.name} ha activado un botón de pánico en ${mappedAlert.location}`,
               duration: 10000,
             });
+          });
+
+          connection.on("ReceiveGuardLocation", (data: any) => {
+            setGuards((prev) => ({
+              ...prev,
+              [data.guardName]: {
+                guardName: data.guardName,
+                zoneId: data.zoneId,
+                lat: data.lat,
+                lng: data.lng,
+                timestamp: new Date(data.timestamp)
+              }
+            }));
           });
 
           connection.on("onAlertAssumed", (data: any) => {
@@ -184,6 +213,5 @@ export const useAlertHub = () => {
     });
   }, []);
 
-  return { alerts, isConnected, closeAlert, manualAddAlert };
+  return { alerts, isConnected, guards, closeAlert, manualAddAlert };
 };
-

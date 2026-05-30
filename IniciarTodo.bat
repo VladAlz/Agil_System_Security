@@ -63,6 +63,11 @@ echo.
 echo [PASO 1.5/4] Limpiando procesos en memoria...
 taskkill /F /IM dotnet.exe /T >nul 2>nul
 taskkill /F /IM node.exe /T >nul 2>nul
+taskkill /F /IM Identity.Service.exe /T >nul 2>nul
+taskkill /F /IM Campus.Service.exe /T >nul 2>nul
+taskkill /F /IM Alerts.Service.exe /T >nul 2>nul
+taskkill /F /IM Report.API.exe /T >nul 2>nul
+taskkill /F /IM Ssiu.Gateway.exe /T >nul 2>nul
 echo   Esperando a que Windows libere los archivos...
 timeout /t 3 /nobreak >nul
 echo.

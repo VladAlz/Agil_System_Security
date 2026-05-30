@@ -10,6 +10,7 @@ import L from 'leaflet';
 import { Alert } from '@/data/alerts';
 import { ZoneLegend, ZONES_DATA } from './ZoneLegend';
 import { cn } from '@/lib/utils';
+import type { GuardLocation } from '@/hooks/use-alert-hub';
 
 // ─── Polígonos de zonas (coordenadas reales del Campus Huachi UTA) ────────────
 const ZONE_POLYGONS = {
@@ -135,9 +136,10 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   focusedZone?: string | null;
+  guards?: Record<string, GuardLocation>;
 }
 
-export const InteractiveMap = ({ alerts, selectedId, onSelect, focusedZone }: Props) => {
+export const InteractiveMap = ({ alerts, selectedId, onSelect, focusedZone, guards = {} }: Props) => {
   // Mostrar solo alertas visibles en el mapa (excluye canceladas para no saturar)
   const mapAlerts = alerts.filter(
     a => a.status === "active" || a.status === "assigned" || a.status === "enroute" || a.status === "resolved"
@@ -248,6 +250,31 @@ export const InteractiveMap = ({ alerts, selectedId, onSelect, focusedZone }: Pr
           focusedZone={focusedZone}
           latestAlertId={latestAlertId}
         />
+
+        {/* ── Marcadores de Guardias en Patrullaje ── */}
+        {Object.values(guards).map((guard) => (
+          <Marker
+            key={`guard-${guard.guardName}`}
+            position={[guard.lat, guard.lng]}
+            icon={L.divIcon({
+              html: `<div class="relative flex items-center justify-center w-8 h-8 rounded-full border-2 bg-blue-600 border-blue-300 shadow-blue-500/60 shadow-lg text-white">
+                       <span class="select-none leading-none text-sm">👮</span>
+                     </div>`,
+              className: "custom-leaflet-marker",
+              iconSize: [32, 32],
+              iconAnchor: [16, 16],
+              popupAnchor: [0, -18],
+            })}
+          >
+            <Popup>
+              <div className="p-1 text-center text-slate-800">
+                <p className="font-bold text-xs text-blue-700">👮 Guardia en Patrullaje</p>
+                <p className="text-xs font-semibold">{guard.guardName}</p>
+                <p className="text-[10px] text-slate-500 mt-1">Última act: {new Date(guard.timestamp).toLocaleTimeString()}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
 
       <ZoneLegend />

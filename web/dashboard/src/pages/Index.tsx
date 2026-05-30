@@ -2,17 +2,17 @@ import { useState, useMemo } from "react";
 import { Sidebar } from "@/components/ssiu/Sidebar";
 import { TopBar } from "@/components/ssiu/TopBar";
 import { AlertPanel } from "@/components/ssiu/AlertPanel";
-import { AlertDetail } from "@/components/ssiu/AlertDetail";
+
 import { NotificationPanel } from "@/components/ssiu/NotificationPanel";
 import { IncidentHistory } from "@/components/ssiu/IncidentHistory";
 import { InteractiveMap } from "@/components/ssiu/InteractiveMap";
 import { useAlertHub } from "@/hooks/use-alert-hub";
-import { AlertTriangle, Shield, CheckCircle2, Clock } from "lucide-react";
+import { AlertTriangle, Shield, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 
 const Index = () => {
-  const { alerts, isConnected, manualAddAlert } = useAlertHub();
+  const { alerts, isConnected, guards, manualAddAlert } = useAlertHub();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focusedZone, setFocusedZone] = useState<string | null>(null);
   
@@ -94,6 +94,7 @@ const Index = () => {
               )}
               <InteractiveMap 
                 alerts={alerts} 
+                guards={guards}
                 selectedId={selectedId} 
                 onSelect={setSelectedId}
                 focusedZone={focusedZone}
@@ -113,17 +114,59 @@ const Index = () => {
             onSelectAlert={setSelectedId}
           />
 
-          {/* Sliding Details Panel */}
+          {/* Floating Selected Alert Details (Non-intrusive overlay on the map) */}
           <AnimatePresence>
             {selected && (
               <motion.div
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="absolute top-0 right-0 bottom-0 z-[2000] w-full lg:w-[600px] bg-card border-l border-border shadow-2xl flex flex-col"
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="absolute bottom-4 right-4 z-[2000] w-[350px] bg-card/95 backdrop-blur shadow-2xl rounded-xl border border-border/50 overflow-hidden"
               >
-                <AlertDetail alert={selected} onClose={() => setSelectedId(null)} />
+                <div className="p-4 relative">
+                  <button 
+                    onClick={() => setSelectedId(null)}
+                    className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                      <span className="text-primary font-bold text-lg">
+                        {selected.user.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-base leading-none">{selected.user.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {selected.user.faculty} · {selected.user.phone}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-xs">
+                    <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                      <span className="text-muted-foreground">Código</span>
+                      <span className="font-mono font-bold">{selected.code}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                      <span className="text-muted-foreground">Estado</span>
+                      <span className="font-bold uppercase text-primary">{selected.status}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                      <span className="text-muted-foreground">Ubicación</span>
+                      <span className="font-medium text-right max-w-[180px] truncate">{selected.location}</span>
+                    </div>
+                    {selected.guard && (
+                      <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                        <span className="text-muted-foreground">Guardia Asignado</span>
+                        <span className="font-bold text-blue-500">{selected.guard}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

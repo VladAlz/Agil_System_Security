@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { guardService } from '../services/guardService';
 import { apiFetch, extractItems } from '../services/apiClient';
+import * as Location from 'expo-location';
 
 import {
   NormalizedAlertStatusEvent,
@@ -43,6 +44,8 @@ interface Alert {
   estado?: string;
   guardiaAsignadoId?: number;
   guardiaAsignadoNombre?: string;
+  lat?: number;
+  lng?: number;
   coords: { x: number; y: number };
 }
 
@@ -62,19 +65,23 @@ const mapAlertFromApi = (bAlert: any): Alert => ({
     ? new Date(bAlert.fechaHora).toLocaleTimeString()
     : 'Ahora',
   type: 'Pánico',
-  severity: 'High',
+  severity: bAlert.estado === 'Activa' ? 'High' : 'Medium',
   estado: bAlert.estado,
   guardiaAsignadoId: bAlert.guardiaAsignadoId,
   guardiaAsignadoNombre: bAlert.guardiaAsignadoNombre,
-  coords: { x: 50, y: 50 },
+  lat: bAlert.lat,
+  lng: bAlert.lng,
+  coords: { x: bAlert.coords?.x || 50, y: bAlert.coords?.y || 50 },
 });
 
 export default function DashboardScreen({ navigation }: any) {
   const { guard, logout, updateGuardStatus } = useAuth();
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [guardLocation, setGuardLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [isTracking, setIsTracking] = useState(false);
 
   const estadoActual = guard?.estado || 'Descansando';
   const estaDisponible = estadoActual === 'En Servicio';
@@ -161,7 +168,7 @@ export default function DashboardScreen({ navigation }: any) {
     );
   }, []);
 
-  const { isConnected, connectionStatus } = useSignalR({
+  const { isConnected, connectionStatus, connection } = useSignalR({
     zonaId: guard?.zonaId,
     onAlertCreated: handleAlertCreated,
     onAlertUpdated: handleAlertUpdated,
@@ -176,6 +183,68 @@ export default function DashboardScreen({ navigation }: any) {
     connectionStatus === 'reconnecting'
      ? 'Sin conexión — reconectando...'
      : 'Sin conexión con el servidor';
+
+  // Guard tracking logic
+  useEffect(() => {
+    let locationSubscription: Location.LocationSubscription | null = null;
+
+    const startTracking = async () => {
+      if (!guard || !isConnected || !connection) return;
+
+      const fallbackLat = -1.267584 + (Math.random() * 0.002 - 0.001);
+      const fallbackLng = -78.624025 + (Math.random() * 0.002 - 0.001);
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('Permiso de ubicación denegado. Usando ubicación simulada.');
+        setGuardLocation({lat: fallbackLat, lng: fallbackLng});
+        connection.invoke('UpdateGuardLocation', guard.nombre, guard.zonaId || 0, fallbackLat, fallbackLng).catch(console.error);
+        return; // We can't watch position if denied
+      }
+
+      try {
+        const initialLoc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        const lat = initialLoc.coords.latitude;
+        const lng = initialLoc.coords.longitude;
+        setGuardLocation({lat, lng});
+        connection.invoke('UpdateGuardLocation', guard.nombre, guard.zonaId || 0, lat, lng).catch(console.error);
+      } catch (err) {
+        console.warn("Could not get initial location, using fallback", err);
+        setGuardLocation({lat: fallbackLat, lng: fallbackLng});
+        connection.invoke('UpdateGuardLocation', guard.nombre, guard.zonaId || 0, fallbackLat, fallbackLng).catch(console.error);
+      }
+
+      try {
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            timeInterval: 5000,
+            distanceInterval: 5,
+          },
+          (location) => {
+            const lat = location.coords.latitude;
+            const lng = location.coords.longitude;
+            setGuardLocation({lat, lng});
+            connection.invoke('UpdateGuardLocation', guard.nombre, guard.zonaId || 0, lat, lng).catch(console.error);
+          }
+        );
+      } catch (err) {
+        console.warn("Watch position failed", err);
+      }
+    };
+
+    if (isTracking) {
+      startTracking();
+    } else {
+      setGuardLocation(null);
+    }
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [guard, isConnected, connection, isTracking]);
 
   useEffect(() => {
     fetchAlerts();
@@ -215,10 +284,21 @@ export default function DashboardScreen({ navigation }: any) {
 
   const mapMarkers = alerts.map((a: Alert) => ({
     id: a.id,
-    ...getLatLng(a.coords.x, a.coords.y),
+    lat: a.lat ?? (a.coords ? getLatLng(a.coords.x, a.coords.y).lat : -1.2675),
+    lng: a.lng ?? (a.coords ? getLatLng(a.coords.x, a.coords.y).lng : -78.6240),
     title: a.user,
-    severity: a.estado === 'Asumida' ? 'Medium' : a.severity,
+    severity: a.severity,
   }));
+
+  if (guardLocation) {
+    mapMarkers.push({
+      id: 'guard-self',
+      lat: guardLocation.lat,
+      lng: guardLocation.lng,
+      title: 'Mi Ubicación',
+      severity: 'guard',
+    });
+  }
 
   const renderItem = ({ item }: { item: Alert }) => (
     <TouchableOpacity
@@ -315,6 +395,14 @@ export default function DashboardScreen({ navigation }: any) {
             >
               <MapPin size={16} color="#f8fafc" />
               <Text style={styles.mapButtonText}>Mapa</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.mapButton, { backgroundColor: isTracking ? '#ef4444' : '#2563eb' }]}
+              onPress={() => setIsTracking(!isTracking)}
+            >
+              <Navigation size={16} color="#f8fafc" />
+              <Text style={styles.mapButtonText}>{isTracking ? 'Detener GPS' : 'Activar GPS'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

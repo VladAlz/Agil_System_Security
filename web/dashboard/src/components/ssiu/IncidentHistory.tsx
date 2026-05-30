@@ -58,7 +58,14 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ alerts, onSele
     fetch(`${API_URL}/alerts?pageSize=100`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then(r => r.json())
+      .then(r => {
+        if (r.status === 401) {
+          localStorage.removeItem("ssiu_token");
+          localStorage.removeItem("ssiu_user");
+          window.location.href = "/login";
+        }
+        return r.json();
+      })
       .then(data => {
         const items: BackendAlert[] = Array.isArray(data) ? data : (data.items ?? []);
         const closed = items.filter(a => a.estado === "Cerrada" || a.estado === "Cancelada");
