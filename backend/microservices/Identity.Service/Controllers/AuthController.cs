@@ -32,7 +32,7 @@ namespace Identity.Service.Controllers
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Correo.ToLower() == correo);
 
-            if (user == null || user.PasswordHash != request.Password)
+            if (user == null || !await VerifyPasswordAsync(request.Password, user))
                 return Unauthorized(new { mensaje = "Correo o contraseña incorrectos" });
 
             var token = GenerateJwt(user);
@@ -72,7 +72,7 @@ namespace Identity.Service.Controllers
                 Correo       = correo,
                 Rol          = request.Rol ?? "Estudiante",
                 Facultad     = request.Facultad?.Trim() ?? "General",
-                PasswordHash = request.Password  // Sin hash — modo desarrollo
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)  // HU-16: hash BCrypt
             };
 
             _context.Users.Add(user);
@@ -101,7 +101,7 @@ namespace Identity.Service.Controllers
                 Correo       = correo,
                 Rol          = "Guardia",
                 Facultad     = string.IsNullOrWhiteSpace(request.Facultad) ? "General" : request.Facultad.Trim(),
-                PasswordHash = request.Password  // Sin hash — modo desarrollo
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)  // HU-16: hash BCrypt
             };
 
             _context.Users.Add(nuevoUsuario);
@@ -160,6 +160,34 @@ namespace Identity.Service.Controllers
                 .ToListAsync();
 
             return Ok(users);
+        }
+
+        /// <summary>
+        /// GET api/auth/guards — Lista los guardias reales para asignación de turnos (HU-14).
+        /// Une los usuarios con rol "Guardia" con su registro Guard (zona/estado) si existe.
+        /// </summary>
+        [HttpGet("guards")]
+        public async Task<IActionResult> GetGuards()
+        {
+            var guards = await (
+                from u in _context.Users
+                where u.Rol == "Guardia"
+                join g in _context.Guards on u.Id equals g.UsuarioId into gj
+                from g in gj.DefaultIfEmpty()
+                orderby u.Nombre
+                select new
+                {
+                    id        = u.Id,            // Identificador estable usado como guardiaId en los turnos
+                    usuarioId = u.Id,
+                    guardId   = g != null ? (int?)g.Id : null,
+                    nombre    = u.Nombre,
+                    correo    = u.Correo,
+                    zonaId    = g != null ? g.ZonaId : null,
+                    estado    = g != null ? g.Estado : "Disponible"
+                }
+            ).ToListAsync();
+
+            return Ok(guards);
         }
 
         /// <summary>DELETE api/auth/users/{id} — Elimina un usuario por ID.</summary>
@@ -271,13 +299,30 @@ namespace Identity.Service.Controllers
 
         // ─── Helpers ──────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// HU-16 — Verifica la contraseña contra el hash BCrypt almacenado.
+        /// Si el registro es legado en texto plano, valida y migra a hash en caliente.
+        /// </summary>
+        private async Task<bool> VerifyPasswordAsync(string plain, User user)
+        {
+            var stored = user.PasswordHash ?? string.Empty;
+
+            if (stored.StartsWith("$2"))
+                return BCrypt.Net.BCrypt.Verify(plain, stored);
+
+            // Legado (texto plano): valida y re-hashea para no volver a guardarlo en claro
+            if (stored != plain) return false;
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(plain);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         private string GenerateJwt(User user)
         {
-            var securityKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    _config["Jwt:Key"] ?? "ClaveSuperSecretaParaDesarrolloDeSsiuCon32CaracteresMinimo"
-                )
-            );
+            var jwtKey = _config["Jwt:Key"]
+                ?? throw new InvalidOperationException("Falta Jwt:Key en la configuración (appsettings o variable de entorno Jwt__Key).");
+
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 

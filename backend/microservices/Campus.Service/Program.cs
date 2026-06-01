@@ -12,7 +12,7 @@ builder.Services.AddDbContext<CampusDbContext>(options =>
 
 // ─── JWT ──────────────────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
-             ?? "ClaveSuperSecretaParaDesarrolloDeSsiuCon32CaracteresMinimo";
+             ?? throw new InvalidOperationException("Falta Jwt:Key en la configuración (appsettings o variable de entorno Jwt__Key).");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

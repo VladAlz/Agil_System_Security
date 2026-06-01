@@ -8,6 +8,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// HU-16 — Secretos fuera del repo: archivo opcional no versionado (SMTP, etc.)
+builder.Configuration.AddJsonFile("appsettings.Secrets.json", optional: true, reloadOnChange: true);
+
 // ─── Base de Datos ────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AlertsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -17,7 +20,7 @@ builder.Services.AddSignalR();
 
 // ─── JWT ──────────────────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
-             ?? "ClaveSuperSecretaParaDesarrolloDeSsiuCon32CaracteresMinimo";
+             ?? throw new InvalidOperationException("Falta Jwt:Key en la configuración (appsettings o variable de entorno Jwt__Key).");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

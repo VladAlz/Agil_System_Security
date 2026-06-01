@@ -44,3 +44,7 @@ yarn-error.log*
 *.user
 *.suo
 
+# Secretos locales (HU-16) — nunca versionar credenciales
+appsettings.Secrets.json
+appsettings.*.Secrets.json
+

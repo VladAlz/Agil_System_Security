@@ -12,7 +12,7 @@ builder.Services.AddDbContext<IdentityDbContext>(options =>
 
 // ─── JWT ──────────────────────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
-             ?? "ClaveSuperSecretaParaDesarrolloDeSsiuCon32CaracteresMinimo";
+             ?? throw new InvalidOperationException("Falta Jwt:Key en la configuración (appsettings o variable de entorno Jwt__Key).");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -55,6 +55,16 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     db.Database.Migrate();   // Aplica todas las migraciones pendientes (incluida AddTrustContacts)
+
+    // HU-16 — Re-hashea contraseñas en texto plano (seed demo o datos legados) a BCrypt.
+    // Idempotente: solo afecta a las que aún no son hash ($2...).
+    var planos = db.Users.Where(u => !u.PasswordHash.StartsWith("$2")).ToList();
+    if (planos.Count > 0)
+    {
+        foreach (var u in planos)
+            u.PasswordHash = BCrypt.Net.BCrypt.HashPassword(u.PasswordHash);
+        db.SaveChanges();
+    }
 }
 
 if (app.Environment.IsDevelopment())

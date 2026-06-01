@@ -15,7 +15,8 @@ namespace Identity.Service.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Semilla de Usuarios — contraseñas en texto plano (modo desarrollo)
+            // Semilla de usuarios demo controlados. Las contraseñas se almacenan aquí
+            // como valor inicial y Program.cs las re-hashea a BCrypt en el arranque (HU-16).
             modelBuilder.Entity<User>().HasData(
                 new User { Id = 1, Nombre = "Admin UTA",      Correo = "admin@uta.edu.ec",      PasswordHash = "admin123",    Rol = "Administrador", Facultad = "FISEI" },
                 new User { Id = 2, Nombre = "Guardia Pedro",  Correo = "guardia1@uta.edu.ec",   PasswordHash = "guard123",    Rol = "Guardia",       Facultad = "" },
