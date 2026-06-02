@@ -53,6 +53,13 @@ export interface AlertHistoryItem {
   zona: string;
   fecha: string;
   guardia?: string;
+  // HU-12 — sellos temporales del ciclo de la alerta (opcionales; vienen del backend real)
+  fechaCreacion?: string;
+  fechaAsumida?: string;
+  fechaEnCamino?: string;
+  fechaResuelta?: string;
+  fechaCerrada?: string;
+  tiempoRespuesta?: string;
 }
 
 // ─── Datos mock — en producción vendrán del Reports.Service ──────

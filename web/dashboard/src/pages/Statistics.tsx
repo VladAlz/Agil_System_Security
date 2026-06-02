@@ -19,6 +19,8 @@ import {
   type AlertHistoryItem,
 } from "@/data/statistics";
 import { useStats } from "@/hooks/use-stats";
+import { useAlertHub } from "@/hooks/use-alert-hub";
+import { fetchAlertReport } from "@/services/alertReportService";
 
 const STATUS_COLORS: Record<string, string> = {
   Activa: "#ef4444",
@@ -27,6 +29,12 @@ const STATUS_COLORS: Record<string, string> = {
   Resuelta: "#22c55e",
   Cerrada: "#6b7280",
   Cancelada: "#a855f7",
+};
+
+// Mapeo del estado interno (inglés) del hub al estado en español (HU-12)
+const STATUS_ES: Record<string, string> = {
+  active: "Activa", assigned: "Asumida", enroute: "En Camino",
+  resolved: "Resuelta", closed: "Cerrada", cancelled: "Cancelada",
 };
 
 const PIE_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#6b7280", "#a855f7"];
@@ -143,12 +151,10 @@ export default function Statistics() {
   const { dashboard, facultyStats: apiFacultyStats, dailyTrend: apiDailyTrend, isLive, loading: statsLoading } = useStats(30);
 
   // Estados de filtros temporales (antes de hacer clic en Aplicar)
-  const [tempRangoFecha, setTempRangoFecha] = useState("mes");
   const [tempZona, setTempZona] = useState("");
   const [tempTipoPersona, setTempTipoPersona] = useState("");
 
   // Estados de filtros aplicados
-  const [rangoFecha, setRangoFecha] = useState("mes");
   const [zona, setZona] = useState("");
   const [tipoPersona, setTipoPersona] = useState("");
 
@@ -158,8 +164,29 @@ export default function Statistics() {
   const [pagina, setPagina] = useState(0);
   const POR_PAGINA = 5;
 
+  // ── HU-12: Reportería real con rango de fechas y línea de tiempo en vivo ──
+  const { alerts: liveAlerts, isConnected: hubConnected } = useAlertHub();
+  const [realIncidents, setRealIncidents] = useState<AlertHistoryItem[] | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+  const _hoy = new Date();
+  const [desde, setDesde] = useState(`${new Date(_hoy.getTime() - 30 * 864e5).toISOString().slice(0, 10)}T00:00`);
+  const [hasta, setHasta] = useState(`${_hoy.toISOString().slice(0, 10)}T23:59`);
+
+  const loadReport = async (from = desde, to = hasta) => {
+    setLoadingReport(true);
+    try {
+      setRealIncidents(await fetchAlertReport({ fechaDesde: from, fechaHasta: to }));
+    } catch {
+      setRealIncidents(null);   // sin backend → cae a datos demo
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  // Carga inicial del reporte real con el rango por defecto (últimos 30 días)
+  useState(() => { loadReport(); });
+
   const handleAplicar = () => {
-    setRangoFecha(tempRangoFecha);
     setZona(tempZona);
     setTipoPersona(tempTipoPersona);
     setPagina(0);
@@ -195,27 +222,15 @@ export default function Statistics() {
 
   // ─── Filtrar incidentes según los filtros aplicados ───
   const filteredHistory = useMemo(() => {
-    let items = [...HISTORY_DATA];
+    // Base: incidentes reales del backend (rango de fechas ya filtrado por Alerts.Service)
+    // o datos demo si el backend no respondió.
+    let items = [...(realIncidents ?? HISTORY_DATA)];
 
-    // Filtro de Zona
-    if (zona) {
-      items = items.filter((h) => h.zona === zona);
-    }
-
-    // Filtro de Tipo de Persona
-    if (tipoPersona) {
-      items = items.filter((h) => getUserRole(h.usuario) === tipoPersona);
-    }
-
-    // Filtro de Fecha (Simulación)
-    if (rangoFecha === "hoy") {
-      items = items.filter((h) => h.fecha.startsWith("20:") || h.fecha.startsWith("19:") || h.fecha.startsWith("18:"));
-    } else if (rangoFecha === "semana") {
-      items = items.slice(0, Math.floor(items.length * 0.65));
-    }
+    if (zona) items = items.filter((h) => h.zona === zona);
+    if (tipoPersona) items = items.filter((h) => getUserRole(h.usuario) === tipoPersona);
 
     return items;
-  }, [zona, tipoPersona, rangoFecha]);
+  }, [realIncidents, zona, tipoPersona]);
 
   // ─── Métricas dinámicas: usa datos reales del backend si están disponibles ───
   const metrics = useMemo(() => {
@@ -389,16 +404,30 @@ export default function Statistics() {
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Filtros:</span>
           </div>
           
-          {/* Rango de Fecha */}
-          <select
-            value={tempRangoFecha}
-            onChange={(e) => setTempRangoFecha(e.target.value)}
-            className="h-9 px-3 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold outline-none focus:border-destructive/40 cursor-pointer text-slate-200"
-          >
-            <option value="mes">Último mes</option>
-            <option value="semana">Última semana</option>
-            <option value="hoy">Hoy</option>
-          </select>
+          {/* Rango de fechas — consulta REAL al backend (HU-12) */}
+          <div className="flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-slate-400" />
+            <input
+              type="datetime-local"
+              value={desde}
+              onChange={(e) => setDesde(e.target.value)}
+              className="h-9 px-2 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold outline-none focus:border-destructive/40 text-slate-200"
+            />
+            <span className="text-slate-500 text-xs">→</span>
+            <input
+              type="datetime-local"
+              value={hasta}
+              onChange={(e) => setHasta(e.target.value)}
+              className="h-9 px-2 rounded-lg bg-slate-800 border border-slate-700 text-xs font-semibold outline-none focus:border-destructive/40 text-slate-200"
+            />
+            <Button
+              onClick={() => loadReport()}
+              disabled={loadingReport}
+              className="h-9 px-4 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-lg"
+            >
+              {loadingReport ? "Consultando…" : "Consultar"}
+            </Button>
+          </div>
 
           {/* Zonas */}
           <select
@@ -471,6 +500,47 @@ export default function Statistics() {
             trend="down"
           />
         </div>
+
+        {/* ── HU-12: Línea de tiempo en vivo (SignalR) ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-sky-400" />
+              <h3 className="text-sm font-black tracking-wider text-white">Línea de tiempo en vivo</h3>
+            </div>
+            <span className={cn(
+              "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+              hubConnected ? "bg-red-500/15 text-red-400" : "bg-slate-700/50 text-slate-400"
+            )}>
+              <span className={cn("w-1.5 h-1.5 rounded-full", hubConnected ? "bg-red-500 animate-pulse" : "bg-slate-500")} />
+              {hubConnected ? "EN VIVO" : "Desconectado"}
+            </span>
+          </div>
+          {liveAlerts.length === 0 ? (
+            <p className="text-xs text-slate-500 py-4 text-center">Sin eventos en tiempo real todavía…</p>
+          ) : (
+            <ol className="relative border-l border-slate-700/60 ml-2 space-y-4">
+              {liveAlerts.slice(0, 8).map((a) => {
+                const estado = STATUS_ES[a.status] || "Activa";
+                const color = STATUS_COLORS[estado] || "#6b7280";
+                return (
+                  <li key={a.id} className="ml-4">
+                    <span
+                      className="absolute -left-[7px] w-3 h-3 rounded-full border-2 border-slate-900"
+                      style={{ backgroundColor: color }}
+                    />
+                    <p className="text-xs font-bold text-white">{estado} — {a.zone}</p>
+                    <p className="text-[10px] text-slate-400 font-mono">{a.createdAt} · {a.user.name}</p>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </motion.div>
 
         {/* ── Fila 1 (Mockup 9): 3 Columnas principales ── */}
         <div className="grid lg:grid-cols-3 gap-6">
@@ -751,14 +821,15 @@ export default function Statistics() {
                   <th className="px-4 py-3">Tipo</th>
                   <th className="px-4 py-3">Zona de Incidencia</th>
                   <th className="px-4 py-3">Guardia Encargado</th>
-                  <th className="px-4 py-3">Hora Incidente</th>
+                  <th className="px-4 py-3">Fecha y Hora</th>
+                  <th className="px-4 py-3">T. Respuesta</th>
                   <th className="px-4 py-3">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {paginados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-slate-500 text-xs font-medium">
+                    <td colSpan={9} className="text-center py-12 text-slate-500 text-xs font-medium">
                       No se encontraron registros con los filtros actuales
                     </td>
                   </tr>
@@ -777,7 +848,8 @@ export default function Statistics() {
                       <td className="px-4 py-3 text-slate-300 font-medium">{item.tipo}</td>
                       <td className="px-4 py-3 text-slate-400">{item.zona}</td>
                       <td className="px-4 py-3 text-slate-300 font-semibold">{item.guardia || "—"}</td>
-                      <td className="px-4 py-3 font-mono">{item.fecha}</td>
+                      <td className="px-4 py-3 font-mono text-slate-300">{item.fecha}</td>
+                      <td className="px-4 py-3 font-mono text-amber-400">{item.tiempoRespuesta || "—"}</td>
                       <td className="px-4 py-3">
                         <span
                           className="text-[9px] font-bold px-2 py-0.5 rounded-full border"

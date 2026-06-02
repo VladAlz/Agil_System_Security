@@ -1,26 +1,44 @@
 {
   "expo": {
-    "name": "guard-app",
+    "name": "SSIU Guardia",
     "slug": "guard-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "guardapp",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "ec.edu.uta.fisei.ssiu.guard",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "La app necesita acceder a tu ubicación para mostrar la posición actual del guardia en el mapa."
       }
     },
     "android": {
+      "package": "ec.edu.uta.fisei.ssiu.guard",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
       "bundler": "metro",
-      "port": 8082
+      "port": 8082,
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "gatewayUrl": "http://192.168.1.62:5000"
     }
   }
 }

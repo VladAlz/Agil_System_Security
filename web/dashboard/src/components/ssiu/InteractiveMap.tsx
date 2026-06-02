@@ -54,6 +54,29 @@ const resolveAlertLatLng = (alert: Alert): [number, number] => {
   return getLatLng(alert.coords.x, alert.coords.y);
 };
 
+// ─── Centro/zoom del Campus Huachi (unificado web ↔ móvil) ────────────────────
+const CAMPUS_CENTER: [number, number] = [-1.267584, -78.624025];
+const CAMPUS_ZOOM = 17;
+
+// ─── Puntos de referencia (POIs) del campus — HU-15 ───────────────────────────
+const CAMPUS_POIS = [
+  { id: "1", name: "FISEI",            lat: -1.26707, lng: -78.62480, color: "#0ea5e9" },
+  { id: "2", name: "FCA",              lat: -1.26807, lng: -78.62478, color: "#eab308" },
+  { id: "3", name: "Administración",   lat: -1.26723, lng: -78.62365, color: "#a855f7" },
+  { id: "4", name: "Áreas Deportivas", lat: -1.26960, lng: -78.62390, color: "#22c55e" },
+];
+
+const getPoiIcon = (name: string, color: string) =>
+  L.divIcon({
+    html: `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap;pointer-events:none;">
+             <span style="width:11px;height:11px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.6)"></span>
+             <span style="font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000,0 0 5px #000">${name}</span>
+           </div>`,
+    className: "ssiu-poi-label",
+    iconSize: [130, 16],
+    iconAnchor: [5, 8],
+  });
+
 // ─── Iconos personalizados por estado ────────────────────────────────────────
 // Se generan como HTML + CSS para que Tailwind los estilice.
 // La clave de diseño: el ícono cambia INMEDIATAMENTE cuando el estado del alert
@@ -152,13 +175,13 @@ export const InteractiveMap = ({ alerts, selectedId, onSelect, focusedZone, guar
   const selectedAlert = alerts.find(a => a.id === selectedId);
   const [centerLat, centerLng] = selectedAlert
     ? resolveAlertLatLng(selectedAlert)
-    : [-1.267584, -78.624025];
+    : CAMPUS_CENTER;
 
   return (
     <div style={{ height: '100%', width: '100%', background: '#0f172a', position: 'relative' }}>
       <MapContainer
         center={[centerLat, centerLng]}
-        zoom={17}
+        zoom={CAMPUS_ZOOM}
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
       >
@@ -166,6 +189,12 @@ export const InteractiveMap = ({ alerts, selectedId, onSelect, focusedZone, guar
         <TileLayer
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           attribution="Tiles &copy; Esri"
+        />
+
+        {/* HU-15: capa de etiquetas (calles y lugares) sobre el satélite */}
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+          attribution="&copy; OpenStreetMap &copy; CARTO"
         />
 
         {/* Polígonos de zonas — se resaltan cuando se enfoca una zona */}
@@ -180,6 +209,16 @@ export const InteractiveMap = ({ alerts, selectedId, onSelect, focusedZone, guar
               weight:      focusedZone === zone.id ? 3 : 1.5,
               dashArray:   focusedZone === zone.id ? undefined : "5, 5",
             }}
+          />
+        ))}
+
+        {/* HU-15: marcadores de puntos de referencia (POIs) del campus */}
+        {CAMPUS_POIS.map(poi => (
+          <Marker
+            key={`poi-${poi.id}`}
+            position={[poi.lat, poi.lng]}
+            icon={getPoiIcon(poi.name, poi.color)}
+            interactive={false}
           />
         ))}
 

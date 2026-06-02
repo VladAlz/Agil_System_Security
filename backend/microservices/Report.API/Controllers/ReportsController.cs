@@ -20,10 +20,38 @@ namespace Report.API.Controllers
     public class ReportsController : ControllerBase
     {
         private readonly ReportDbContext _context;
+        private readonly IHttpClientFactory _httpFactory;
+        private readonly IConfiguration _config;
 
-        public ReportsController(ReportDbContext context)
+        public ReportsController(ReportDbContext context, IHttpClientFactory httpFactory, IConfiguration config)
         {
-            _context = context;
+            _context     = context;
+            _httpFactory = httpFactory;
+            _config      = config;
+        }
+
+        /// <summary>
+        /// HU-14 — Verifica contra Identity.Service que el guardia exista y esté registrado.
+        /// Degrada de forma elegante (no bloquea) si Identity no responde.
+        /// </summary>
+        private async Task<bool> GuardExistsAsync(int guardiaId)
+        {
+            try
+            {
+                var identityBase = _config["Services:IdentityService"];
+                if (string.IsNullOrEmpty(identityBase)) return true;
+
+                var http = _httpFactory.CreateClient();
+                var resp = await http.GetAsync($"{identityBase}/api/auth/guards");
+                if (!resp.IsSuccessStatusCode) return true;
+
+                var guards = await resp.Content.ReadFromJsonAsync<List<GuardListItem>>();
+                return guards != null && guards.Any(g => g.Id == guardiaId);
+            }
+            catch
+            {
+                return true; // Si Identity está caído, no bloquear la operación
+            }
         }
 
         private static DateTime GetEcuadorNow()
@@ -50,6 +78,13 @@ namespace Report.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateReport([FromBody] CreateShiftReportDto dto)
         {
+            // HU-14: el guardia debe existir realmente en la base de datos
+            if (!await GuardExistsAsync(dto.GuardiaId))
+                return BadRequest(new
+                {
+                    mensaje = $"El guardia #{dto.GuardiaId} no existe o no está registrado como guardia."
+                });
+
             // Regla de negocio: un guardia no puede tener dos turnos activos
             var turnoActivo = await _context.ShiftReports
                 .AnyAsync(r => r.GuardiaId == dto.GuardiaId && r.Estado == "Activo");
@@ -438,5 +473,11 @@ namespace Report.API.Controllers
     {
         public int    Id     { get; set; }
         public string Estado { get; set; } = string.Empty;
+    }
+
+    // HU-14 — DTO para validar guardias contra Identity.Service (GET /api/auth/guards)
+    internal class GuardListItem
+    {
+        public int Id { get; set; }
     }
 }

@@ -1,27 +1,13 @@
-// ─── LeafletMap.tsx (nativo) — Mapa Leaflet en WebView, SIN Google ────────────
-// Reemplaza el antiguo embed de Google Maps (que fallaba con "must be used in an
-// iframe") por Leaflet: satélite ESRI + calles CARTO + zonas + POIs + marcadores.
-// Misma interfaz que antes (centerLat/centerLng/markers) para Dashboard,
-// AlertDetail y MapScreen.
+// ─── GuardLeafletWebView.tsx — Mapa Leaflet en WebView (HU-13/HU-15) ──────────
+// Renderiza el mapa del guardia con Leaflet dentro de un WebView: mismo satélite
+// ESRI + capa de calles CARTO + zonas + POIs que el dashboard, SIN API key de
+// Google (evita react-native-maps y su requisito de facturación).
 
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-interface MarkerData {
-  id: string;
-  lat: number;
-  lng: number;
-  title: string;
-  severity: string;
-}
-
-interface Props {
-  centerLat: number;
-  centerLng: number;
-  markers?: MarkerData[];
-}
-
+// Polígonos de zonas (coords reales Campus Huachi) en pares [lat, lng]
 const ZONES = [
   { color: '#0ea5e9', coords: [[-1.266403,-78.625312],[-1.267101,-78.625493],[-1.267619,-78.625643],[-1.267394,-78.624758],[-1.267828,-78.624503],[-1.267693,-78.624075],[-1.266852,-78.624276],[-1.266477,-78.624359],[-1.266470,-78.624768]] },
   { color: '#eab308', coords: [[-1.267714,-78.625654],[-1.267416,-78.624725],[-1.267848,-78.624568],[-1.267731,-78.624043],[-1.268145,-78.623881],[-1.268232,-78.624010],[-1.268361,-78.624278],[-1.268678,-78.624185],[-1.268798,-78.624850],[-1.268414,-78.624999],[-1.268746,-78.625922],[-1.266403,-78.625312]] },
@@ -36,7 +22,7 @@ const POIS = [
   { name: 'Áreas Deportivas', lat: -1.26960, lng: -78.62390, color: '#22c55e' },
 ];
 
-function buildHtml(lat: number, lng: number, markers: MarkerData[]): string {
+function buildHtml(lat: number, lng: number): string {
   return `<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -45,37 +31,36 @@ function buildHtml(lat: number, lng: number, markers: MarkerData[]): string {
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${lat}, ${lng}], 18);
+  var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${lat}, ${lng}], 17);
   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png').addTo(map);
   var zones = ${JSON.stringify(ZONES)};
-  zones.forEach(function(z){ L.polygon(z.coords, { color: z.color, fillColor: z.color, fillOpacity: 0.15, weight: 2 }).addTo(map); });
+  zones.forEach(function(z){ L.polygon(z.coords, { color: z.color, fillColor: z.color, fillOpacity: 0.18, weight: 2 }).addTo(map); });
   var pois = ${JSON.stringify(POIS)};
   pois.forEach(function(p){
     L.marker([p.lat, p.lng], { interactive: false, icon: L.divIcon({ className: '', iconSize: [130,16], iconAnchor: [5,8],
-      html: '<div style="display:flex;align-items:center;gap:4px;white-space:nowrap"><span style="width:9px;height:9px;border-radius:50%;background:'+p.color+';border:2px solid #fff"></span><span style="font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000">'+p.name+'</span></div>' }) }).addTo(map);
+      html: '<div style="display:flex;align-items:center;gap:4px;white-space:nowrap"><span style="width:10px;height:10px;border-radius:50%;background:'+p.color+';border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.6)"></span><span style="font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000,0 0 5px #000">'+p.name+'</span></div>' }) }).addTo(map);
   });
-  var markers = ${JSON.stringify(markers)};
-  markers.forEach(function(m){
-    var color = (m.severity === 'guard') ? '#2563eb' : '#dc2626';
-    L.marker([m.lat, m.lng], { icon: L.divIcon({ className: '', iconSize: [28,28], iconAnchor: [14,14],
-      html: '<div style="width:24px;height:24px;border-radius:50%;background:'+color+';border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.5)"></div>' }) }).addTo(map).bindPopup(m.title);
-  });
+  L.marker([${lat}, ${lng}], { icon: L.divIcon({ className: '', iconSize: [30,30], iconAnchor: [15,15],
+    html: '<div style="width:28px;height:28px;border-radius:50%;background:#2563eb;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.5)">P</div>' }) }).addTo(map).bindPopup('Tu ubicacion');
 </script>
 </body></html>`;
 }
 
-export const LeafletMap = ({ centerLat, centerLng, markers = [] }: Props) => {
-  const first = markers.length > 0 ? markers[0] : null;
-  const lat = first && Number.isFinite(first.lat) ? first.lat : (Number.isFinite(centerLat) ? centerLat : -1.267584);
-  const lng = first && Number.isFinite(first.lng) ? first.lng : (Number.isFinite(centerLng) ? centerLng : -78.624025);
+interface Props {
+  lat: number;
+  lng: number;
+}
 
+export function GuardLeafletWebView({ lat, lng }: Props) {
+  const safeLat = Number.isFinite(lat) ? lat : -1.267584;
+  const safeLng = Number.isFinite(lng) ? lng : -78.624025;
   return (
     <View style={styles.container}>
       <WebView
         originWhitelist={['*']}
-        source={{ html: buildHtml(lat, lng, markers), baseUrl: 'https://ssiu.local/' }}
-        style={styles.map}
+        source={{ html: buildHtml(safeLat, safeLng), baseUrl: 'https://ssiu.local/' }}
+        style={styles.webview}
         javaScriptEnabled
         domStorageEnabled
         scrollEnabled={false}
@@ -86,9 +71,9 @@ export const LeafletMap = ({ centerLat, centerLng, markers = [] }: Props) => {
       />
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a', position: 'relative' },
-  map: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: '#0f172a' },
+  webview: { flex: 1, backgroundColor: '#0f172a' },
 });

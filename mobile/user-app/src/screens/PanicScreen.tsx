@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PanicButton from '../components/PanicButton';
@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import type { RootStackParamList } from '../../App';
 
 import { BASE_URL } from '../config/api';
+import { notifyLocal } from '../services/notificationService';
+import * as Location from 'expo-location';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Panic'>;
 
@@ -56,6 +58,17 @@ export default function PanicScreen({ navigation }: Props) {
 
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+  // Evita que se emitan alertas duplicadas si se dispara varias veces seguidas
+  const sendingRef = useRef(false);
+
+  // Pide el permiso de ubicación apenas se entra (justo después del login),
+  // no durante la presión del botón de pánico.
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      Location.requestForegroundPermissionsAsync().catch(() => {});
+    }
+  }, []);
+
   const showAppModal = (icon: string, iconColor: string, title: string, message: string, buttons?: { text: string; color: string; onPress: () => void }[]) => {
     setModalInfo({
       visible: true, icon, iconColor, title, message,
@@ -73,46 +86,65 @@ export default function PanicScreen({ navigation }: Props) {
   };
 
   const handleConfirm = async () => {
+    if (sendingRef.current) return;   // ya hay un envío en curso → no duplicar
+    sendingRef.current = true;
     try {
-      // GPS es OBLIGATORIO — no se puede emitir alerta sin ubicación
-      if (typeof navigator === 'undefined' || !navigator.geolocation) {
-        showAppModal(
-          'location-outline', '#f59e0b',
-          'GPS No Disponible',
-          'Tu dispositivo no soporta geolocalización. No se puede emitir la alerta sin conocer tu ubicación.'
-        );
-        return;
-      }
-
-      let pos: GeolocationPosition;
+      // GPS es OBLIGATORIO — no se puede emitir alerta sin ubicación.
+      // Web → navigator.geolocation · Nativo (APK) → expo-location.
+      let currentLat: number;
+      let currentLng: number;
       try {
-        pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 8000,
-            maximumAge: 0,
+        if (Platform.OS === 'web') {
+          if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            showAppModal(
+              'location-outline', '#f59e0b',
+              'GPS No Disponible',
+              'Tu navegador no soporta geolocalización. No se puede emitir la alerta sin conocer tu ubicación.'
+            );
+            return;
+          }
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            });
           });
-        });
+          currentLat = pos.coords.latitude;
+          currentLng = pos.coords.longitude;
+        } else {
+          // App nativa: pedir permiso y leer GPS con expo-location
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') {
+            showAppModal(
+              'location-outline', '#ef4444',
+              'Permiso de Ubicación',
+              'Para emitir la alerta necesitamos tu ubicación exacta. Activa el permiso de ubicación e inténtalo de nuevo.',
+              [{
+                text: 'Reintentar',
+                color: '#3b82f6',
+                onPress: () => { setModalInfo(prev => ({ ...prev, visible: false })); handleConfirm(); },
+              }]
+            );
+            return;
+          }
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          currentLat = loc.coords.latitude;
+          currentLng = loc.coords.longitude;
+        }
       } catch (geoErr: any) {
-        // El usuario denegó los permisos o el GPS falló
         showAppModal(
           'location-outline', '#ef4444',
           'Ubicación Requerida',
-          'Para emitir una alerta de emergencia necesitamos tu ubicación exacta para que los guardias puedan encontrarte. Por favor, activa los permisos de ubicación en tu navegador e inténtalo de nuevo.',
+          'No pudimos obtener tu ubicación. Asegúrate de tener el GPS activado e inténtalo de nuevo.',
           [{
             text: 'Reintentar',
             color: '#3b82f6',
-            onPress: () => {
-              setModalInfo(prev => ({ ...prev, visible: false }));
-              handleConfirm(); // Reintentar
-            },
+            onPress: () => { setModalInfo(prev => ({ ...prev, visible: false })); handleConfirm(); },
           }]
         );
         return;
       }
-
-      const currentLat = pos.coords.latitude;
-      const currentLng = pos.coords.longitude;
 
       const alertData = {
         usuarioId: parseInt(user?.id ?? "0"),
@@ -134,6 +166,9 @@ export default function PanicScreen({ navigation }: Props) {
         throw new Error(`Error del servidor: ${alertResponse.status} ${errText}`);
       }
 
+      // HU-13: notificación local en el dispositivo confirmando el despacho
+      notifyLocal('🚨 Alerta enviada', 'Tu alerta de pánico fue despachada. Los guardias fueron notificados.');
+
       navigation.navigate('Confirmation', {
         timestamp: new Date().toISOString(),
         userId: user?.id ?? '',
@@ -145,6 +180,8 @@ export default function PanicScreen({ navigation }: Props) {
         'Error al Enviar Alerta',
         `No se pudo enviar la alerta. Verifica tu conexión o vuelve a iniciar sesión.\n\nDetalle: ${error.message}`
       );
+    } finally {
+      sendingRef.current = false;
     }
   };
 

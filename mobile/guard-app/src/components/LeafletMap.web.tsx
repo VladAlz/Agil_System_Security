@@ -20,6 +20,25 @@ interface MarkerData {
   severity: string;
 }
 
+// HU-15: puntos de referencia del Campus Huachi (mismos que el dashboard web)
+const CAMPUS_POIS = [
+  { id: '1', name: 'FISEI',            lat: -1.26707, lng: -78.62480, color: '#0ea5e9' },
+  { id: '2', name: 'FCA',              lat: -1.26807, lng: -78.62478, color: '#eab308' },
+  { id: '3', name: 'Administración',   lat: -1.26723, lng: -78.62365, color: '#a855f7' },
+  { id: '4', name: 'Áreas Deportivas', lat: -1.26960, lng: -78.62390, color: '#22c55e' },
+];
+
+const poiIcon = (name: string, color: string) =>
+  L.divIcon({
+    html: `<div style="display:flex;align-items:center;gap:4px;white-space:nowrap;">
+             <span style="width:10px;height:10px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.6)"></span>
+             <span style="font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000,0 0 5px #000">${name}</span>
+           </div>`,
+    className: 'ssiu-poi-label',
+    iconSize: [130, 16],
+    iconAnchor: [5, 8],
+  });
+
 interface Props {
   centerLat: number;
   centerLng: number;
@@ -47,13 +66,23 @@ export const LeafletMap = ({ centerLat, centerLng, markers = [] }: Props) => {
         zoomControl={false}
       >
         <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles &copy; Esri"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         <MapUpdater lat={targetLat} lng={targetLng} />
+
+        {/* HU-15: puntos de referencia del campus */}
+        {CAMPUS_POIS.map((poi) => (
+          <Marker
+            key={`poi-${poi.id}`}
+            position={[poi.lat, poi.lng]}
+            icon={poiIcon(poi.name, poi.color)}
+            interactive={false}
+          />
+        ))}
+
         {markers.map((marker) => {
           const isGuard = marker.severity === 'guard';
-          const bgColor = isGuard ? 'bg-blue-600' : 'bg-red-600';
           const emoji = isGuard ? '👮' : '🚨';
           
           return (

@@ -68,6 +68,8 @@ taskkill /F /IM Campus.Service.exe /T >nul 2>nul
 taskkill /F /IM Alerts.Service.exe /T >nul 2>nul
 taskkill /F /IM Report.API.exe /T >nul 2>nul
 taskkill /F /IM Ssiu.Gateway.exe /T >nul 2>nul
+echo   Liberando servidores de compilacion ^(evita locks MSB3492^)...
+dotnet build-server shutdown >nul 2>nul
 echo   Esperando a que Windows libere los archivos...
 timeout /t 3 /nobreak >nul
 echo.
@@ -75,9 +77,13 @@ echo.
 :: ─── Compilar backend ─────────────────────────────────────
 echo [PASO 2/4] Compilando backend .NET...
 dotnet build "backend\microservices\Ssiu.Microservices.sln" -m:1 /nr:false --nologo -q
-if %errorlevel% neq 0 (
-    echo [ADVERTENCIA] VS Code tiene bloqueados los archivos de cache ^(MSB3492^).
-    echo               Continuando con la ultima version compilada...
+if errorlevel 1 (
+    echo [ADVERTENCIA] Build incremental fallo ^(posible lock MSB3492 de VS Code^).
+    echo               Reintentando una vez tras liberar servidores...
+    dotnet build-server shutdown >nul 2>nul
+    timeout /t 2 /nobreak >nul
+    dotnet build "backend\microservices\Ssiu.Microservices.sln" -m:1 /nr:false --nologo -q
+    if errorlevel 1 echo [ADVERTENCIA] Persiste el lock. Continuando con la ultima version compilada...
 )
 echo   OK.
 echo.

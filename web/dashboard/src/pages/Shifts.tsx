@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fetchShiftReports, createShiftReport, closeShiftReport, type ShiftReport } from "@/services/reportService";
+import { fetchGuards, type Guard } from "@/services/guardService";
 import { useStats } from "@/hooks/use-stats";
 
 // ─── Descarga CSV ─────────────────────────────────────────────────────────────
@@ -49,6 +50,8 @@ function formatDuration(inicio: string, fin?: string | null) {
 
 // ─── Modal para abrir turno ───────────────────────────────────────────────────
 interface OpenShiftModalProps {
+  guards:         Guard[];
+  activeGuardIds: Set<number>;
   onClose:  () => void;
   onSubmit: (dto: { guardiaId: number; nombreGuardia: string; zonaId: number; nombreZona: string; observaciones?: string }) => Promise<void>;
   loading:  boolean;
@@ -61,20 +64,29 @@ const ZONAS = [
   { id: 4, nombre: "Zona 4 — Deportes" },
 ];
 
-function OpenShiftModal({ onClose, onSubmit, loading }: OpenShiftModalProps) {
+function OpenShiftModal({ guards, activeGuardIds, onClose, onSubmit, loading }: OpenShiftModalProps) {
   const [guardiaId, setGuardiaId]         = useState("");
-  const [nombreGuardia, setNombreGuardia] = useState("");
   const [zonaId, setZonaId]               = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [err, setErr]                     = useState("");
 
+  // Al elegir un guardia, preselecciona su zona asignada si la tiene (HU-14)
+  const handleGuardChange = (value: string) => {
+    setGuardiaId(value);
+    const g = guards.find(x => x.id === parseInt(value));
+    if (g?.zonaId && ZONAS.some(z => z.id === g.zonaId)) setZonaId(String(g.zonaId));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guardiaId || !nombreGuardia || !zonaId) { setErr("Todos los campos obligatorios son requeridos."); return; }
+    if (!guardiaId || !zonaId) { setErr("Selecciona un guardia y una zona."); return; }
+    const guard = guards.find(g => g.id === parseInt(guardiaId));
+    if (!guard) { setErr("Guardia inválido."); return; }
+    if (activeGuardIds.has(guard.id)) { setErr("Ese guardia ya tiene un turno abierto."); return; }
     const zona = ZONAS.find(z => z.id === parseInt(zonaId));
     if (!zona) { setErr("Zona inválida."); return; }
     setErr("");
-    await onSubmit({ guardiaId: parseInt(guardiaId), nombreGuardia, zonaId: zona.id, nombreZona: zona.nombre, observaciones });
+    await onSubmit({ guardiaId: guard.id, nombreGuardia: guard.nombre, zonaId: zona.id, nombreZona: zona.nombre, observaciones });
   };
 
   return (
@@ -103,26 +115,27 @@ function OpenShiftModal({ onClose, onSubmit, loading }: OpenShiftModalProps) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ID Guardia *</label>
-              <input
-                value={guardiaId}
-                onChange={e => setGuardiaId(e.target.value)}
-                type="number" min="1"
-                placeholder="Ej: 3"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Nombre Guardia *</label>
-              <input
-                value={nombreGuardia}
-                onChange={e => setNombreGuardia(e.target.value)}
-                placeholder="Ej: G. Ramírez"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
-            </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Guardia (de la base de datos) *</label>
+            <select
+              value={guardiaId}
+              onChange={e => handleGuardChange(e.target.value)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
+            >
+              <option value="">Seleccionar guardia…</option>
+              {guards.map(g => {
+                const enTurno = activeGuardIds.has(g.id);
+                return (
+                  <option key={g.id} value={g.id} disabled={enTurno}>
+                    {g.nombre} — #{g.id} · {enTurno ? "en turno" : g.estado}
+                  </option>
+                );
+              })}
+            </select>
+            {guards.length === 0 && (
+              <p className="text-[10px] text-amber-400">No hay guardias registrados en la base de datos.</p>
+            )}
+            <p className="text-[10px] text-emerald-400/80">✓ Validado contra GET /api/auth/guards — solo guardias reales y disponibles.</p>
           </div>
 
           <div className="space-y-1.5">
@@ -261,6 +274,7 @@ export default function Shifts() {
   const { guardPerformance, reload: reloadStats } = useStats();
 
   const [shifts, setShifts]             = useState<ShiftReport[]>([]);
+  const [guards, setGuards]             = useState<Guard[]>([]);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -287,8 +301,23 @@ export default function Shifts() {
     }
   };
 
+  // ── Cargar guardias reales para el selector (HU-14) ───────────────────────
+  const loadGuards = async () => {
+    try {
+      setGuards(await fetchGuards());
+    } catch {
+      setGuards([]);
+    }
+  };
+
+  // Guardias que ya tienen un turno activo → no pueden abrir otro
+  const activeGuardIds = useMemo(
+    () => new Set(shifts.filter(s => s.estado === "Activo").map(s => s.guardiaId)),
+    [shifts]
+  );
+
   // Carga inicial
-  useState(() => { loadShifts(); });
+  useState(() => { loadShifts(); loadGuards(); });
 
   // ── Filtrado local ────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -594,6 +623,8 @@ export default function Shifts() {
       {/* ── Modales ─────────────────────────────────────────────────────────── */}
       {showOpenModal && (
         <OpenShiftModal
+          guards={guards}
+          activeGuardIds={activeGuardIds}
           onClose={() => setShowOpenModal(false)}
           onSubmit={handleOpenShift}
           loading={actionLoading}
