@@ -35,5 +35,8 @@ namespace Alerts.Service.Models
         public string ColorZona     { get; set; } = string.Empty;
         public string Facultad      { get; set; } = string.Empty;
         public string CorreoUsuario { get; set; } = string.Empty;
+
+        // ─── Reporte final del incidente ─────────────────────────────────────────────
+        public string? ObservacionesGuardia { get; set; }
     }
 }

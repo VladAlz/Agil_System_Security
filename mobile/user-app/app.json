@@ -39,7 +39,7 @@
       "port": 8081
     },
     "extra": {
-      "gatewayUrl": "http://192.168.1.62:5000"
+      "gatewayUrl": "http://10.79.19.29:5000"
     }
   }
 }

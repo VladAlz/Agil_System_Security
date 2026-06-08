@@ -22,18 +22,19 @@ interface Props {
 }
 
 export const AlertToast = ({ alerts, onAttend, onDismiss }: Props) => (
-  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2500] flex flex-col gap-3 w-[340px] max-w-[88vw]">
+  <div className="absolute top-20 right-6 z-[2500] flex flex-col gap-3 w-[340px] max-w-[88vw]">
     <AnimatePresence>
       {alerts.map((a) => {
         const p = PRIORITY[a.type] ?? PRIORITY.panic;
         return (
           <motion.div
             key={a.id}
-            initial={{ opacity: 0, y: -30, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.92 }}
+            initial={{ opacity: 0, x: 30, scale: 0.92 }}
+            animate={{ opacity: 0.6, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 30, scale: 0.92 }}
+            whileHover={{ opacity: 1 }}
             transition={{ duration: 0.25 }}
-            className={cn("rounded-xl border-2 shadow-2xl backdrop-blur-md p-3.5 bg-slate-900/95", p.ring)}
+            className={cn("rounded-xl border-2 shadow-2xl backdrop-blur-md p-3.5 bg-slate-900/95 cursor-default", p.ring)}
           >
             <div className="flex items-start justify-between gap-2">
               <div className={cn("flex items-center gap-1.5 font-black text-[11px] uppercase tracking-wider", p.text)}>

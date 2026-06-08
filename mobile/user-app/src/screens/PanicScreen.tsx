@@ -85,9 +85,12 @@ export default function PanicScreen({ navigation }: Props) {
     await logout();
   };
 
+  const [isSending, setIsSending] = useState(false);
+
   const handleConfirm = async () => {
     if (sendingRef.current) return;   // ya hay un envío en curso → no duplicar
     sendingRef.current = true;
+    setIsSending(true);
     try {
       // GPS es OBLIGATORIO — no se puede emitir alerta sin ubicación.
       // Web → navigator.geolocation · Nativo (APK) → expo-location.
@@ -105,9 +108,9 @@ export default function PanicScreen({ navigation }: Props) {
           }
           const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0,
+              enableHighAccuracy: false, // <-- Changed to false for speed on web
+              timeout: 5000,
+              maximumAge: 10000,
             });
           });
           currentLat = pos.coords.latitude;
@@ -128,7 +131,7 @@ export default function PanicScreen({ navigation }: Props) {
             );
             return;
           }
-          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }); // <-- Changed to Balanced for speed
           currentLat = loc.coords.latitude;
           currentLng = loc.coords.longitude;
         }
@@ -182,6 +185,7 @@ export default function PanicScreen({ navigation }: Props) {
       );
     } finally {
       sendingRef.current = false;
+      setIsSending(false);
     }
   };
 
@@ -200,7 +204,7 @@ export default function PanicScreen({ navigation }: Props) {
       <View style={styles.center}>
         <PanicButton onConfirm={handleConfirm} />
         <Text style={styles.instruction}>
-          Mantén presionado 3 segundos{'\n'}para activar la alerta de emergencia
+          {isSending ? 'Enviando alerta de emergencia, por favor espera...' : 'Mantén presionado 3 segundos\npara activar la alerta de emergencia'}
         </Text>
       </View>
 

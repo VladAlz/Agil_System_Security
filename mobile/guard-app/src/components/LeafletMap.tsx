@@ -45,9 +45,9 @@ function buildHtml(lat: number, lng: number, markers: MarkerData[]): string {
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([${lat}, ${lng}], 18);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png').addTo(map);
+  var map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 22 }).setView([${lat}, ${lng}], 18);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxNativeZoom: 19, maxZoom: 22 }).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', { maxNativeZoom: 19, maxZoom: 22 }).addTo(map);
   var zones = ${JSON.stringify(ZONES)};
   zones.forEach(function(z){ L.polygon(z.coords, { color: z.color, fillColor: z.color, fillOpacity: 0.15, weight: 2 }).addTo(map); });
   var pois = ${JSON.stringify(POIS)};
@@ -66,9 +66,8 @@ function buildHtml(lat: number, lng: number, markers: MarkerData[]): string {
 }
 
 export const LeafletMap = ({ centerLat, centerLng, markers = [] }: Props) => {
-  const first = markers.length > 0 ? markers[0] : null;
-  const lat = first && Number.isFinite(first.lat) ? first.lat : (Number.isFinite(centerLat) ? centerLat : -1.267584);
-  const lng = first && Number.isFinite(first.lng) ? first.lng : (Number.isFinite(centerLng) ? centerLng : -78.624025);
+  const lat = Number.isFinite(centerLat) ? centerLat : -1.267584;
+  const lng = Number.isFinite(centerLng) ? centerLng : -78.624025;
 
   return (
     <View style={styles.container}>

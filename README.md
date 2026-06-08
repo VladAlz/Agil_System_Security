@@ -107,7 +107,6 @@ npx expo start
 **Terminal 8 (Panel Web de Administración - Dashboard):**
 ```bash
 cd web/dashboard
-npm install
 npm run dev
 ```
 
@@ -154,7 +153,7 @@ Las bases de datos se crean y pueblan automáticamente. Las contraseñas ahora s
 ## 💡 Tips de Solución de Errores
 *   **Conexión en celular:** Si la app en tu teléfono físico se queda cargando eternamente, **desactiva el Firewall de Windows Defender**. Este bloquea los puertos 5000, 5001 y 5002 por defecto.
 *   **Bases de Datos Viejas:** Si hay errores de esquema al correr `dotnet run`, abre SSMS y elimina las bases de datos `SsiuIdentityDb`, `SsiuAlertsDb`, `SsiuCampusDb` y `SsiuReportDb` (`DROP DATABASE...`). Al volver a correr, se crearán limpias.
-*   **IP Dinámica:** Si Expo no logra extraer tu IP, el código hace un fallback seguro a la última IP registrada (`192.168.1.61`). Si estás en otra red, modifica temporalmente ese fallback en los archivos `config/api.ts` de cada app.
+*   **IP Dinámica:** Si Expo no logra extraer tu IP, el código hace un fallback seguro a la última IP registrada (`10.79.19.29`). Si estás en otra red, modifica temporalmente ese fallback en los archivos `config/api.ts` de cada app.
 
 ---
 

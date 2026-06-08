@@ -511,9 +511,10 @@ namespace Alerts.Service.Controllers
         /// <summary>
         /// PUT api/alerts/{id}/close — Cierra la alerta definitivamente.
         /// Transición: Resuelta → Cerrada
+        /// Recibe observaciones/reporte del guardia.
         /// </summary>
         [HttpPut("{id:int}/close")]
-        public async Task<IActionResult> CloseAlert(int id)
+        public async Task<IActionResult> CloseAlert(int id, [FromBody] CloseAlertDto dto)
         {
             var alert = await _context.Alerts.FindAsync(id);
             if (alert == null)
@@ -526,8 +527,12 @@ namespace Alerts.Service.Controllers
                     estadoActual = alert.Estado
                 });
 
+            if (string.IsNullOrWhiteSpace(dto.ObservacionesGuardia))
+                return BadRequest(new { mensaje = "Las observaciones del reporte son obligatorias para cerrar el caso." });
+
             alert.Estado = "Cerrada";
             alert.FechaCerrada = GetEcuadorNow();
+            alert.ObservacionesGuardia = dto.ObservacionesGuardia;
 
             await _context.SaveChangesAsync();
 
@@ -537,6 +542,7 @@ namespace Alerts.Service.Controllers
                 alert.Id,
                 alert.Estado,
                 alert.FechaCerrada,
+                alert.ObservacionesGuardia,
                 mensaje = "Alerta cerrada — situación controlada"
             });
             await _hubContext.Clients.Group($"zona_{alert.ZonaId}").SendAsync("onAlertClosed", new
@@ -607,4 +613,6 @@ namespace Alerts.Service.Controllers
     }
 
     public record TrustContactDto(string Nombre, string Correo);
+
+    public record CloseAlertDto(string ObservacionesGuardia);
 }

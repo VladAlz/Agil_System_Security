@@ -51,9 +51,10 @@ export const alertService = {
     });
   },
 
-  async closeAlert(alertId: string | number): Promise<AlertDetail> {
+  async closeAlert(alertId: string | number, observacionesGuardia?: string): Promise<AlertDetail> {
     return apiFetch<AlertDetail>(`/Alerts/${alertId}/close`, {
       method: 'PUT',
+      body: JSON.stringify({ observacionesGuardia }),
     });
   },
 

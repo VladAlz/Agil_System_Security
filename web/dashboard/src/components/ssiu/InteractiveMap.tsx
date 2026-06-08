@@ -182,19 +182,16 @@ export const InteractiveMap = ({ alerts, selectedId, onSelect, focusedZone, guar
       <MapContainer
         center={[centerLat, centerLng]}
         zoom={CAMPUS_ZOOM}
+        maxZoom={22}
         style={{ height: '100%', width: '100%' }}
         zoomControl={false}
       >
-        {/* Mapa satelital ESRI — funciona sin API key */}
+        {/* Mapa base: OpenStreetMap (igual que la app del guardia) */}
         <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Tiles &copy; Esri"
-        />
-
-        {/* HU-15: capa de etiquetas (calles y lugares) sobre el satélite */}
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
-          attribution="&copy; OpenStreetMap &copy; CARTO"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          maxNativeZoom={19}
+          maxZoom={22}
         />
 
         {/* Polígonos de zonas — se resaltan cuando se enfoca una zona */}

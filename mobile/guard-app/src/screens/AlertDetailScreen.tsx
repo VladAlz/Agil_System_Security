@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -53,6 +54,7 @@ export default function AlertDetailScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reportText, setReportText] = useState('');
 
   const loadAlert = async () => {
     try {
@@ -159,10 +161,18 @@ export default function AlertDetailScreen({ route, navigation }: any) {
   const handleClose = async () => {
     if (!alert) return;
 
+    if (!reportText.trim()) {
+      NativeAlert.alert(
+        'Reporte obligatorio',
+        'Debes ingresar las observaciones finales sobre el incidente antes de poder cerrar el caso.'
+      );
+      return;
+    }
+
     setUpdatingStatus(true);
 
     try {
-      const updatedAlert = await alertService.closeAlert(alert.id);
+      const updatedAlert = await alertService.closeAlert(alert.id, reportText.trim());
       setAlert(updatedAlert);
     } catch (err: any) {
       alertMessage(err.message || 'No se pudo cerrar la alerta');
@@ -326,6 +336,18 @@ export default function AlertDetailScreen({ route, navigation }: any) {
                 </Text>
               </View>
             </View>
+
+            {(alert as any).observacionesGuardia && (
+              <View style={[styles.infoRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#334155' }]}>
+                <ClipboardList size={18} color="#ef4444" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.infoLabel}>Reporte del Guardia</Text>
+                  <Text style={[styles.infoValue, { color: '#cbd5e1' }]}>
+                    {(alert as any).observacionesGuardia}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
 
           <View style={styles.actions}>
@@ -389,20 +411,31 @@ export default function AlertDetailScreen({ route, navigation }: any) {
             )}
 
             {currentStatus === 'Resuelta' && (
-              <TouchableOpacity
-                style={[styles.primaryAction, { backgroundColor: '#9333ea' }]}
-                onPress={handleClose}
-                disabled={updatingStatus}
-              >
-                {updatingStatus ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <XCircle size={20} color="#fff" />
-                    <Text style={styles.primaryActionText}>Cerrar Caso</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              <View style={styles.reportContainer}>
+                <Text style={styles.sectionTitle}>Reporte Final (Obligatorio)</Text>
+                <TextInput
+                  style={styles.textArea}
+                  placeholder="Detalla qué sucedió y cómo se resolvió la alerta..."
+                  placeholderTextColor="#64748b"
+                  value={reportText}
+                  onChangeText={setReportText}
+                  multiline
+                />
+                <TouchableOpacity
+                  style={[styles.primaryAction, { backgroundColor: '#9333ea', marginTop: 12 }]}
+                  onPress={handleClose}
+                  disabled={updatingStatus}
+                >
+                  {updatingStatus ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <>
+                      <XCircle size={20} color="#fff" />
+                      <Text style={styles.primaryActionText}>Guardar y Cerrar Caso</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             )}
 
             {currentStatus === 'Cerrada' && (
@@ -431,6 +464,8 @@ export default function AlertDetailScreen({ route, navigation }: any) {
     </SafeAreaView>
   );
 }
+
+import { ClipboardList } from 'lucide-react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -688,6 +723,24 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-
+  reportContainer: {
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 8,
+  },
+  textArea: {
+    minHeight: 100,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 14,
+    padding: 14,
+    color: '#fff',
+    fontWeight: '700',
+    textAlignVertical: 'top',
+  },
 
 });

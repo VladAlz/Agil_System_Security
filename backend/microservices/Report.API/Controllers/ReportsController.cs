@@ -232,6 +232,14 @@ namespace Report.API.Controllers
         public async Task<IActionResult> GetDashboardStats()
         {
             var http       = _httpFactory.CreateClient();
+            
+            // Reenviar el token JWT al hacer llamadas entre microservicios
+            var token = Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(token))
+            {
+                http.DefaultRequestHeaders.Add("Authorization", token);
+            }
+
             var alertsBase = _config["Services:AlertsService"];
             var campusBase = _config["Services:CampusService"];
 
@@ -314,6 +322,11 @@ namespace Report.API.Controllers
         public async Task<IActionResult> GetZoneStats()
         {
             var http       = _httpFactory.CreateClient();
+            var token = Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(token))
+            {
+                http.DefaultRequestHeaders.Add("Authorization", token);
+            }
             var alertsBase = _config["Services:AlertsService"];
 
             var alertsResp = await http.GetAsync($"{alertsBase}/api/alerts/all");
@@ -351,6 +364,11 @@ namespace Report.API.Controllers
         public async Task<IActionResult> GetFacultyStats()
         {
             var http       = _httpFactory.CreateClient();
+            var token = Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(token))
+            {
+                http.DefaultRequestHeaders.Add("Authorization", token);
+            }
             var alertsBase = _config["Services:AlertsService"];
 
             var alertsResp = await http.GetAsync($"{alertsBase}/api/alerts/all");
@@ -389,6 +407,11 @@ namespace Report.API.Controllers
                 return BadRequest(new { mensaje = "El parámetro 'days' debe estar entre 1 y 365." });
 
             var http       = _httpFactory.CreateClient();
+            var token = Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(token))
+            {
+                http.DefaultRequestHeaders.Add("Authorization", token);
+            }
             var alertsBase = _config["Services:AlertsService"];
 
             var alertsResp = await http.GetAsync($"{alertsBase}/api/alerts/all");

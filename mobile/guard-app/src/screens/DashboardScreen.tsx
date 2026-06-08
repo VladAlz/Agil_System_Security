@@ -79,8 +79,10 @@ export default function DashboardScreen({ navigation }: any) {
 
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [guardLocation, setGuardLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [mapCenter, setMapCenter] = useState({ lat: -1.267584, lng: -78.624025 });
   const [isLoading, setIsLoading] = useState(true);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [isAlertsHovered, setIsAlertsHovered] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
 
   const estadoActual = guard?.estado || 'Descansando';
@@ -303,7 +305,11 @@ export default function DashboardScreen({ navigation }: any) {
   const renderItem = ({ item }: { item: Alert }) => (
     <TouchableOpacity
       style={styles.alertCard}
-      onPress={() => navigation.navigate('AlertDetail', { alertId: item.id })}
+      onPress={() => {
+        const lat = item.lat ?? (item.coords ? getLatLng(item.coords.x, item.coords.y).lat : -1.267584);
+        const lng = item.lng ?? (item.coords ? getLatLng(item.coords.x, item.coords.y).lng : -78.624025);
+        setMapCenter({ lat, lng });
+      }}
     >
       <View
         style={[
@@ -327,61 +333,53 @@ export default function DashboardScreen({ navigation }: any) {
         </View>
       </View>
 
-      <ChevronRight size={20} color="#334155" />
+      <TouchableOpacity
+        style={{ padding: 10 }}
+        onPress={() => navigation.navigate('AlertDetail', { alertId: item.id })}
+      >
+        <ChevronRight size={20} color="#cbd5e1" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {showOfflineBanner ? (
+    <SafeAreaView style={styles.root}>
+      {showOfflineBanner && (
         <View style={styles.offlineBanner}>
-         <Text style={styles.offlineBannerText}>{offlineMessage}</Text>
+          <Text style={styles.offlineBannerText}>{offlineMessage}</Text>
         </View>
-      ) : null}
-      <View style={styles.mapContainer}>
-        <LeafletMap
-          centerLat={-1.267584}
-          centerLng={-78.624025}
-          markers={mapMarkers}
-        />
+      )}
 
-        <View style={styles.mapBadge}>
-          <Navigation size={14} color="#fff" />
-          <Text style={styles.mapBadgeText}>
-            {isConnected ? 'SignalR Activo' : 'Sin conexión'} ·{' '}
-            {guard?.zonaNombre || 'Sin zona'}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.header}>
+      <View style={styles.container}>
+        {/* Panel 1/5 */}
+        <View style={styles.leftPanel}>
           <View style={styles.headerInfo}>
             <Text style={styles.title}>Panel de Control</Text>
-            <Text style={styles.subtitle}>
-              Guardia: {guard?.nombre || 'Guardia'}
-            </Text>
-
+            <Text style={styles.subtitle}>Guardia: {guard?.nombre || 'Guardia'}</Text>
             <View style={styles.zoneRow}>
               <View style={styles.zoneBadge}>
-                <Text style={styles.zoneText}>
-                  {guard?.zonaNombre || 'Zona no asignada'}
-                </Text>
+                <Text style={styles.zoneText}>{guard?.zonaNombre || 'Zona no asignada'}</Text>
               </View>
-
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor: estaDisponible ? '#16a34a' : '#475569',
-                  },
-                ]}
-              >
+              <View style={[styles.statusBadge, { backgroundColor: estaDisponible ? '#16a34a' : '#475569' }]}>
                 <ShieldCheck size={13} color="#fff" />
                 <Text style={styles.statusText}>{estadoActual}</Text>
               </View>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={[styles.statusButton, { backgroundColor: estaDisponible ? '#475569' : '#16a34a' }]}
+            onPress={handleToggleStatus}
+            disabled={changingStatus}
+          >
+            {changingStatus ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.statusButtonText}>
+                {estaDisponible ? 'Cambiar a Descansando' : 'Cambiar a En Servicio'}
+              </Text>
+            )}
+          </TouchableOpacity>
 
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -389,12 +387,9 @@ export default function DashboardScreen({ navigation }: any) {
               <Text style={styles.logoutText}>Salir</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.mapButton}
-              onPress={() => navigation.navigate('Map')}
-            >
+            <TouchableOpacity style={styles.mapButton} onPress={() => navigation.navigate('Map')}>
               <MapPin size={16} color="#f8fafc" />
-              <Text style={styles.mapButtonText}>Mapa</Text>
+              <Text style={styles.mapButtonText}>Ver Mapa Local</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -405,95 +400,100 @@ export default function DashboardScreen({ navigation }: any) {
               <Text style={styles.mapButtonText}>{isTracking ? 'Detener GPS' : 'Activar GPS'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.reportButton}
-              onPress={() => navigation.navigate('Report')}
-            >
+            <TouchableOpacity style={styles.reportButton} onPress={() => navigation.navigate('Report')}>
               <ClipboardList size={16} color="#f8fafc" />
-              <Text style={styles.mapButtonText}>Reporte</Text>
+              <Text style={styles.mapButtonText}>Generar Reporte</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.historyButton}
-              onPress={() => navigation.navigate('AlertHistory')}
-            >
+            <TouchableOpacity style={styles.historyButton} onPress={() => navigation.navigate('AlertHistory')}>
               <History size={16} color="#f8fafc" />
-              <Text style={styles.mapButtonText}>Historial</Text>
+              <Text style={styles.mapButtonText}>Historial Turnos</Text>
             </TouchableOpacity>
+          </View>
 
+          <View style={styles.miniStatContainer}>
             <View style={styles.miniStat}>
               <Text style={styles.miniStatNum}>{alerts.length}</Text>
-              <Text style={styles.miniStatLabel}>Activas</Text>
+              <Text style={styles.miniStatLabel}>Alertas Activas</Text>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.statusButton,
-            {
-              backgroundColor: estaDisponible ? '#475569' : '#16a34a',
-            },
-          ]}
-          onPress={handleToggleStatus}
-          disabled={changingStatus}
-        >
-          {changingStatus ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.statusButtonText}>
-              {estaDisponible
-                ? 'Cambiar a Descansando'
-                : 'Cambiar a En Servicio'}
-            </Text>
-          )}
-        </TouchableOpacity>
+        {/* Mapa 4/5 */}
+        <View style={styles.rightPanel}>
+          <View style={styles.mapContainer}>
+            <LeafletMap centerLat={mapCenter.lat} centerLng={mapCenter.lng} markers={mapMarkers} />
+            <View style={styles.mapBadge}>
+              <Navigation size={14} color="#fff" />
+              <Text style={styles.mapBadgeText}>
+                {isConnected ? 'SignalR Activo' : 'Sin conexión'} · {guard?.zonaNombre || 'Sin zona'}
+              </Text>
+            </View>
+          </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Alertas Recientes</Text>
+          {/* Alertas Sobrepuestas (Transparente + Hover) */}
+          <View
+            style={[styles.alertsOverlay, { opacity: isAlertsHovered ? 0.98 : 0.6 }]}
+            {...{
+              onMouseEnter: () => setIsAlertsHovered(true),
+              onMouseLeave: () => setIsAlertsHovered(false)
+            } as any}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Alertas Recientes</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('AlertList')}>
+                <Text style={styles.viewAllText}>Ver todas</Text>
+              </TouchableOpacity>
+            </View>
 
-          <TouchableOpacity onPress={() => navigation.navigate('AlertList')}>
-            <Text style={styles.viewAllText}>Ver todas</Text>
-          </TouchableOpacity>
+            <FlatList
+              data={alerts}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={<Text style={styles.emptyText}>No hay alertas activas.</Text>}
+            />
+          </View>
         </View>
-
-        <FlatList
-          data={alerts}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              No existen alertas recientes.
-            </Text>
-          }
-        />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
     backgroundColor: '#0f172a',
   },
-  mapContainer: {
-    height: 260,
-    width: '100%',
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  leftPanel: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    borderRightWidth: 1,
+    borderRightColor: '#1e293b',
+  },
+  rightPanel: {
+    flex: 4,
+    position: 'relative',
     backgroundColor: '#000',
-    overflow: 'hidden',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+  },
+  mapContainer: {
+    flex: 1,
+    width: '100%',
   },
   mapBadge: {
     position: 'absolute',
-    bottom: 12,
-    left: 12,
+    bottom: 20,
+    left: 20,
     backgroundColor: '#ef4444',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -502,43 +502,32 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
+    zIndex: 5,
   },
   mapBadgeText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
-  content: {
-    flex: 1,
-    paddingTop: 20,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 24,
-    marginBottom: 16,
-    gap: 12,
-  },
   headerInfo: {
-    flex: 1,
+    marginBottom: 24,
   },
   title: {
     color: '#f1f5f9',
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '900',
   },
   subtitle: {
     color: '#64748b',
-    fontSize: 13,
+    fontSize: 14,
     marginTop: 4,
   },
   zoneRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 10,
+    marginTop: 12,
   },
   zoneBadge: {
     backgroundColor: '#1e293b',
@@ -566,71 +555,142 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
-  headerActions: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  logoutButton: {
-    backgroundColor: '#334155',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  logoutText: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  miniStat: {
-    backgroundColor: '#1e293b',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  miniStatNum: {
-    color: '#ef4444',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  miniStatLabel: {
-    color: '#64748b',
-    fontSize: 9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
   statusButton: {
-    marginHorizontal: 24,
-    marginBottom: 18,
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
   statusButtonText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-  sectionTitle: {
+  headerActions: {
+    gap: 12,
+  },
+  logoutButton: {
+    backgroundColor: '#334155',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoutText: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  mapButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reportButton: {
+    backgroundColor: '#7c3aed',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  historyButton: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mapButtonText: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  miniStatContainer: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  miniStat: {
+    backgroundColor: '#1e293b',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+    width: '100%',
+  },
+  miniStatNum: {
+    color: '#ef4444',
+    fontSize: 32,
+    fontWeight: '900',
+  },
+  miniStatLabel: {
     color: '#94a3b8',
     fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginTop: 4,
+  },
+  alertsOverlay: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    width: 360,
+    maxHeight: '90%',
+    backgroundColor: '#0f172a',
+    borderRadius: 16,
+    paddingTop: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+    overflow: 'hidden',
+    // @ts-ignore
+    transition: 'opacity 0.3s ease',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    color: '#e2e8f0',
+    fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
+  viewAllText: {
+    color: '#38bdf8',
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
   list: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   alertCard: {
     backgroundColor: '#1e293b',
-    borderRadius: 16,
+    borderRadius: 14,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -645,7 +705,7 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    padding: 16,
+    padding: 14,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -654,18 +714,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   userName: {
-    color: '#f1f5f9',
-    fontSize: 16,
-    fontWeight: '700',
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '800',
   },
   alertType: {
     color: '#ef4444',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
     backgroundColor: '#ef444415',
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 4,
   },
   infoRow: {
@@ -675,51 +735,14 @@ const styles = StyleSheet.create({
   },
   infoText: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 12,
   },
   emptyText: {
     color: '#64748b',
     fontSize: 13,
     textAlign: 'center',
-    marginTop: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 12,
-  },
-  viewAllText: {
-    color: '#ef4444',
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-  mapButton: {
-    backgroundColor: '#2563eb',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-
-  reportButton: {
-    backgroundColor: '#7c3aed',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-
-  mapButtonText: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: '800',
+    marginTop: 30,
+    fontStyle: 'italic',
   },
   offlineBanner: {
     backgroundColor: '#f59e0b',
@@ -735,15 +758,4 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     textTransform: 'uppercase',
   },
-
-  historyButton: {
-    backgroundColor: '#f97316',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-
 });

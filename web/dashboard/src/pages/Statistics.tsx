@@ -117,27 +117,27 @@ const StatCard = ({
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
-    className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 hover:shadow-lg transition-shadow"
+    className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 p-5 hover:bg-slate-800/50 transition-colors"
   >
     <div className="flex items-start justify-between">
       <div className="space-y-1">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</p>
-        <p className="text-3xl font-black tracking-tight">{value}</p>
-        {sub && <p className="text-xs text-muted-foreground/70 font-medium">{sub}</p>}
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className="text-3xl font-black tracking-tight text-white">{value}</p>
+        {sub && <p className="text-xs text-slate-500 font-medium">{sub}</p>}
       </div>
       <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0", color)}>
         <Icon className="w-5 h-5 text-white" />
       </div>
     </div>
     {trend && (
-      <div className="mt-3 pt-3 border-t border-border flex items-center gap-1.5">
+      <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-1.5">
         <TrendingUp className={cn(
           "w-3.5 h-3.5",
-          trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-muted-foreground"
+          trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-slate-500"
         )} />
         <span className={cn(
           "text-[11px] font-bold",
-          trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-muted-foreground"
+          trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-slate-500"
         )}>
           {trend === "up" ? "+12% vs ayer" : trend === "down" ? "-8% vs ayer" : "Sin cambios"}
         </span>
@@ -558,7 +558,7 @@ export default function Statistics() {
                 </div>
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="sm"
                   onClick={() => downloadCSV(facultyData, "incidentes_facultad.csv", ["facultad", "total", "panic", "medical", "suspicious"])}
                   className="text-[10px] h-7 px-2 border border-slate-800 hover:bg-slate-800 text-slate-300"
                 >
@@ -606,7 +606,7 @@ export default function Statistics() {
                 </div>
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="sm"
                   onClick={() => downloadCSV(personTypeData, "distribucion_roles.csv", ["name", "value"])}
                   className="text-[10px] h-7 px-2 border border-slate-800 hover:bg-slate-800 text-slate-300"
                 >
@@ -666,7 +666,7 @@ export default function Statistics() {
                 </div>
                 <Button
                   variant="ghost"
-                  size="xs"
+                  size="sm"
                   onClick={() => downloadCSV(guardStatsData, "tiempos_respuesta_guardia.csv", ["name", "responseTime", "label"])}
                   className="text-[10px] h-7 px-2 border border-slate-800 hover:bg-slate-800 text-slate-300"
                 >
@@ -710,7 +710,7 @@ export default function Statistics() {
               </div>
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={() => downloadCSV(HOURLY_TREND, "alertas_por_hora.csv", ["hour", "alerts"])}
                 className="text-[10px] h-7 px-2 border border-slate-800 hover:bg-slate-800 text-slate-300"
               >
@@ -743,7 +743,7 @@ export default function Statistics() {
               </div>
               <Button
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={() => downloadCSV(activeDailyTrend, "tendencia_diaria.csv", ["date", "alerts", "panic", "medical", "suspicious"])}
                 className="text-[10px] h-7 px-2 border border-slate-800 hover:bg-slate-800 text-slate-300"
               >
